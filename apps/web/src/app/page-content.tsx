@@ -9,7 +9,7 @@ import type { LatestComic } from "@/sections/home/latest-launch"
 
 export function PageContent({ latestComic }: { latestComic: LatestComic | null }) {
   return (
-    <div className="min-h-screen bg-dc-black text-white">
+    <div className="min-h-svh bg-dc-black text-white">
       <FullPageScroll />
       <Header />
       <main id="main-content" tabIndex={-1} data-fullpage-root>

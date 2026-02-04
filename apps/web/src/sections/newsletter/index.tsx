@@ -11,7 +11,7 @@ export default function Newsletter() {
     <section
       id="newsletter"
       aria-labelledby="newsletter-heading"
-      className="relative flex !min-h-0 flex-col overflow-hidden lg:!min-h-screen lg:h-screen lg:flex-row"
+      className="relative flex !min-h-0 flex-col overflow-hidden lg:!min-h-svh lg:h-svh lg:flex-row"
       style={{ backgroundColor: "#f9f2e2" }}
     >
       <div className="relative hidden w-full lg:block lg:w-[45%]">

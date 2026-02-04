@@ -31,7 +31,11 @@ export default async function ReaderPage({ params, searchParams }: ReaderPagePro
 
   if (!result || !result.data) {
     return (
-      <main id="main-content" tabIndex={-1} className="flex min-h-screen items-center justify-center bg-black">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex min-h-svh items-center justify-center bg-black"
+      >
         <p className="text-xl text-white">HQ não encontrada</p>
       </main>
     )
@@ -45,7 +49,7 @@ export default async function ReaderPage({ params, searchParams }: ReaderPagePro
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black"
+        className="flex min-h-svh flex-col items-center justify-center gap-4 bg-black"
       >
         <p className="text-xl text-white">Esta HQ não possui arquivo para leitura</p>
         <a href={backUrl} className="text-dc-blue hover:underline">

@@ -9,7 +9,7 @@ export default function WhereToStart() {
     <section
       id="where-to-start"
       aria-labelledby="where-to-start-heading"
-      className="relative h-screen w-full"
+      className="relative h-svh w-full"
     >
       <Image
         src="/images/start/background.webp"

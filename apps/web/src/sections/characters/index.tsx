@@ -21,11 +21,11 @@ export default async function Characters() {
       className="relative overflow-hidden bg-dc-dark"
     >
       {hasError ? (
-        <div className="flex h-screen items-center justify-center px-4">
+        <div className="flex h-svh items-center justify-center px-4">
           <CharactersClientFallback />
         </div>
       ) : characters && characters.length === 0 ? (
-        <div className="flex h-screen items-center justify-center">
+        <div className="flex h-svh items-center justify-center">
           <EmptyState />
         </div>
       ) : characters ? (

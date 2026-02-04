@@ -66,7 +66,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
 
   if (loadingState === "idle" || loadingState === "loading" || loadingState === "extracting") {
     return (
-      <div className="flex min-h-screen flex-col bg-dc-black">
+      <div className="flex min-h-svh flex-col bg-dc-black">
         <div className="px-6 pt-6">
           <Link
             href={backUrl}
@@ -110,7 +110,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
 
   if (loadingState === "error") {
     return (
-      <div className="flex min-h-screen flex-col bg-dc-black">
+      <div className="flex min-h-svh flex-col bg-dc-black">
         <div className="px-6 pt-6">
           <Link
             href={backUrl}
@@ -147,7 +147,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-screen flex-col bg-dc-black">
+    <div ref={containerRef} className="flex min-h-svh flex-col bg-dc-black">
       <ResumeReadingModal
         isOpen={isResumeModalOpen && resumePage !== null}
         comicTitle={comicTitle}

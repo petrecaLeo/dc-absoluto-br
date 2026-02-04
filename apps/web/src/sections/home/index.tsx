@@ -13,7 +13,7 @@ export default function Home({ latestComic }: HomeProps) {
   const { scrollToCharacters } = useHome()
 
   return (
-    <section aria-label="Início" className="relative h-screen overflow-hidden">
+    <section aria-label="Início" className="relative h-svh overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Image
           src="/images/home/home-1.webp"

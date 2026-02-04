@@ -87,7 +87,7 @@ export function CharacterPageContent({
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen bg-dc-black">
+    <main id="main-content" tabIndex={-1} className="min-h-svh bg-dc-black">
       <header className="fixed top-0 left-0 right-0 z-50 bg-dc-black/60 backdrop-blur-xl border-b border-white/5">
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
           <nav className="flex items-center justify-between">

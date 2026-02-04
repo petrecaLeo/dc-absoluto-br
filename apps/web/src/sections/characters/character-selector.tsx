@@ -24,7 +24,7 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
   } = useCharacters(characters)
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
+    <div className="relative h-svh w-full overflow-hidden">
       {charactersWithImages.map((character, index) => (
         <div
           key={`bg-${character.id}`}
