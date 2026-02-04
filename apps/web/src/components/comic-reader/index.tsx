@@ -33,7 +33,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
     progress,
     isFirstPage,
     isLastPage,
-    isFullscreen,
+    isFullscreenActive,
     showControls,
     containerRef,
     imageContainerRef,
@@ -60,8 +60,8 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
     isDragging,
   } = useComicReader({ downloadUrl, comicTitle, comicId })
 
-  const controlsHidden = isFullscreen && !showControls
-  const fullscreenButtonTitle = isFullscreen ? "Sair da tela cheia (F)" : "Tela cheia (F)"
+  const controlsHidden = isFullscreenActive && !showControls
+  const fullscreenButtonTitle = isFullscreenActive ? "Sair da tela cheia (F)" : "Tela cheia (F)"
   const doublePageButtonTitle = isDoublePageMode ? "Página simples (D)" : "Página dupla (D)"
 
   if (loadingState === "idle" || loadingState === "loading" || loadingState === "extracting") {
@@ -147,7 +147,14 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-svh flex-col bg-dc-black">
+    <div
+      ref={containerRef}
+      className={`flex min-h-svh flex-col bg-dc-black ${
+        isFullscreenActive
+          ? "fixed inset-0 z-[9999] h-[100dvh] w-[100vw] overscroll-none"
+          : ""
+      }`}
+    >
       <ResumeReadingModal
         isOpen={isResumeModalOpen && resumePage !== null}
         comicTitle={comicTitle}
@@ -158,7 +165,9 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
         onClose={handleStartOverReading}
       />
       <header
-        className={`fixed top-0 left-0 right-0 z-50 flex flex-wrap items-center gap-2 border-b border-white/5 bg-dc-black/80 px-4 py-3 backdrop-blur-xl transition-all duration-300 md:flex-nowrap md:justify-between ${controlsHidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
+        className={`fixed top-0 left-0 right-0 z-50 flex flex-wrap items-center gap-2 border-b border-white/5 bg-dc-black/80 px-4 py-3 backdrop-blur-xl transition-all duration-300 md:flex-nowrap md:justify-between ${
+          isFullscreenActive ? "pt-[calc(env(safe-area-inset-top)+0.75rem)]" : ""
+        } ${controlsHidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <Link
           href={backUrl}
@@ -224,9 +233,13 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
               className="cursor-pointer rounded-full border border-white/10 bg-white/5 p-1.5 text-white/60 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
               title={fullscreenButtonTitle}
               aria-label={fullscreenButtonTitle}
-              aria-pressed={isFullscreen}
+              aria-pressed={isFullscreenActive}
             >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {isFullscreenActive ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
             </button>
           </div>
         </div>
@@ -235,7 +248,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex flex-1 items-center justify-center overflow-hidden ${isFullscreen ? "pt-0 pb-0" : "pt-24 pb-24 md:pt-14"}`}
+        className={`flex flex-1 items-center justify-center overflow-hidden ${isFullscreenActive ? "pt-0 pb-0" : "pt-24 pb-24 md:pt-14"}`}
       >
         {currentPageData && (
           <div
@@ -279,7 +292,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
                 alt={`Página ${currentPage + 1}`}
                 width={isDoublePageMode ? 600 : 800}
                 height={isDoublePageMode ? 900 : 1200}
-                className={`pointer-events-none w-auto select-none object-contain transition-transform duration-100 ${isFullscreen ? "max-h-[100svh]" : "max-h-[calc(100svh-152px)]"} ${isDoublePageMode ? "max-w-[50vw]" : ""}`}
+                className={`pointer-events-none w-auto select-none object-contain transition-transform duration-100 ${isFullscreenActive ? "max-h-[100svh]" : "max-h-[calc(100svh-152px)]"} ${isDoublePageMode ? "max-w-[50vw]" : ""}`}
                 priority
                 unoptimized
                 draggable={false}
@@ -290,7 +303,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
                   alt={`Página ${currentPage + 2}`}
                   width={600}
                   height={900}
-                  className={`pointer-events-none max-w-[50vw] w-auto select-none object-contain transition-transform duration-100 ${isFullscreen ? "max-h-[100svh]" : "max-h-[calc(100svh-152px)]"}`}
+                  className={`pointer-events-none max-w-[50vw] w-auto select-none object-contain transition-transform duration-100 ${isFullscreenActive ? "max-h-[100svh]" : "max-h-[calc(100svh-152px)]"}`}
                   priority
                   unoptimized
                   draggable={false}
@@ -302,7 +315,9 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
       </main>
 
       <footer
-        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-dc-black/80 px-4 py-4 backdrop-blur-xl transition-all duration-300 ${controlsHidden ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
+        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-dc-black/80 px-4 py-4 backdrop-blur-xl transition-all duration-300 ${
+          isFullscreenActive ? "pb-[calc(env(safe-area-inset-bottom)+1rem)]" : ""
+        } ${controlsHidden ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <div className="mx-auto flex max-w-md items-center justify-center gap-3">
           <button

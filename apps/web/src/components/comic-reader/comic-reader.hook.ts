@@ -32,6 +32,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 })
@@ -45,6 +46,16 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   const lastPanPositionRef = useRef({ x: 0, y: 0 })
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef({ x: 0, y: 0 })
+  const scrollLockRef = useRef<{
+    bodyOverflow: string
+    htmlOverflow: string
+    bodyPosition: string
+    bodyTop: string
+    bodyLeft: string
+    bodyRight: string
+    bodyWidth: string
+    scrollY: number
+  } | null>(null)
   const wheelAccumulatorRef = useRef(0)
   const wheelResetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastWheelTriggerRef = useRef(0)
@@ -59,6 +70,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     ? currentPage >= totalPages - 2
     : currentPage === totalPages - 1
   const isZoomed = zoomLevel > 1
+  const isFullscreenActive = isFullscreen || isPseudoFullscreen
   const nextPageData =
     isDoublePageMode && currentPage + 1 < totalPages ? pages[currentPage + 1] : null
 
@@ -140,20 +152,57 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   }, [comicId, goToPage])
 
   const toggleFullscreen = useCallback(async () => {
-    if (!containerRef.current) return
+    const container = containerRef.current
+    if (!container) return
 
-    if (!document.fullscreenElement) {
-      await containerRef.current.requestFullscreen()
-    } else {
-      await document.exitFullscreen()
+    const fullscreenElement =
+      document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element })
+        .webkitFullscreenElement
+
+    const exitFullscreen =
+      document.exitFullscreen ||
+      (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen
+
+    if (fullscreenElement) {
+      if (exitFullscreen) {
+        await exitFullscreen.call(document)
+      }
+      return
     }
-  }, [])
+
+    if (isPseudoFullscreen) {
+      setIsPseudoFullscreen(false)
+      return
+    }
+
+    const requestFullscreen =
+      container.requestFullscreen ||
+      (container as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> })
+        .webkitRequestFullscreen ||
+      (container as HTMLElement & { webkitRequestFullScreen?: () => Promise<void> })
+        .webkitRequestFullScreen
+
+    if (requestFullscreen) {
+      try {
+        await requestFullscreen.call(container)
+        return
+      } catch (error) {
+        console.warn("Fullscreen API falhou, usando fallback:", error)
+      }
+    }
+
+    setIsPseudoFullscreen(true)
+  }, [isPseudoFullscreen])
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const isNowFullscreen = !!document.fullscreenElement
+      const fullscreenElement =
+        document.fullscreenElement ||
+        (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement
+      const isNowFullscreen = !!fullscreenElement
       setIsFullscreen(isNowFullscreen)
       if (isNowFullscreen) {
+        setIsPseudoFullscreen(false)
         setShowControls(false)
       } else {
         setShowControls(true)
@@ -164,8 +213,55 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     }
 
     document.addEventListener("fullscreenchange", handleFullscreenChange)
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
+    }
   }, [])
+
+  useEffect(() => {
+    if (!isPseudoFullscreen) return
+
+    setShowControls(true)
+
+    const html = document.documentElement
+    const body = document.body
+
+    scrollLockRef.current = {
+      bodyOverflow: body.style.overflow,
+      htmlOverflow: html.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      scrollY: window.scrollY,
+    }
+
+    body.style.overflow = "hidden"
+    html.style.overflow = "hidden"
+    body.style.position = "fixed"
+    body.style.top = `-${scrollLockRef.current.scrollY}px`
+    body.style.left = "0"
+    body.style.right = "0"
+    body.style.width = "100%"
+
+    return () => {
+      const lockState = scrollLockRef.current
+      if (!lockState) return
+
+      body.style.overflow = lockState.bodyOverflow
+      html.style.overflow = lockState.htmlOverflow
+      body.style.position = lockState.bodyPosition
+      body.style.top = lockState.bodyTop
+      body.style.left = lockState.bodyLeft
+      body.style.right = lockState.bodyRight
+      body.style.width = lockState.bodyWidth
+      window.scrollTo(0, lockState.scrollY)
+      scrollLockRef.current = null
+    }
+  }, [isPseudoFullscreen])
 
   const resetHideControlsTimer = useCallback(() => {
     if (hideControlsTimeoutRef.current) {
@@ -223,9 +319,16 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
       } else if (event.key === "z" || event.key === "Z") {
         event.preventDefault()
         toggleZoom()
-      } else if (event.key === "Escape" && isZoomed) {
-        event.preventDefault()
-        resetZoom()
+      } else if (event.key === "Escape") {
+        if (isFullscreenActive) {
+          event.preventDefault()
+          toggleFullscreen()
+          return
+        }
+        if (isZoomed) {
+          event.preventDefault()
+          resetZoom()
+        }
       } else if (event.key === "d" || event.key === "D") {
         event.preventDefault()
         toggleDoublePageMode()
@@ -238,6 +341,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
       totalPages,
       toggleFullscreen,
       toggleZoom,
+      isFullscreenActive,
       isZoomed,
       resetZoom,
       toggleDoublePageMode,
@@ -621,7 +725,8 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     progress,
     isFirstPage,
     isLastPage,
-    isFullscreen,
+    isFullscreenActive,
+    isPseudoFullscreen,
     showControls,
     comicTitle,
     containerRef,
