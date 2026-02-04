@@ -26,7 +26,7 @@ const PARTICLES = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
 
 export function ParticleEffect({ accentColor }: ParticleEffectProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-30 h-28 overflow-hidden opacity-70">
+    <div className="absolute bottom-0 left-0 right-0 h-28 overflow-hidden opacity-70">
       {PARTICLES.map((p, i) => (
         <span
           key={i}
