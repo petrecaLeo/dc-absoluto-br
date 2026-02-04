@@ -36,6 +36,9 @@ export function FullPageScroll() {
   const rootRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
+    const supportsFullPage = window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    if (!supportsFullPage) return
+
     rootRef.current = document.querySelector<HTMLElement>("[data-fullpage-root]")
 
     const root = document.documentElement

@@ -23,11 +23,6 @@ body {
   scroll-margin-top: 96px;
 }
 
-[data-fullpage-root] > section,
-[data-fullpage-root] > footer {
-  scroll-margin-top: 0;
-}
-
 .skip-link {
   position: fixed;
   left: 0.75rem;
@@ -54,41 +49,65 @@ body {
   outline-offset: 3px !important;
 }
 
-html.fullpage-scroll,
-html:has([data-fullpage-root]) {
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
+@media (hover: hover) and (pointer: fine) {
+  [data-fullpage-root] > section,
+  [data-fullpage-root] > footer {
+    scroll-margin-top: 0;
+  }
+
+  html.fullpage-scroll,
+  html:has([data-fullpage-root]) {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+
+  html.fullpage-scroll,
+  body.fullpage-scroll,
+  html:has([data-fullpage-root]),
+  body:has([data-fullpage-root]) {
+    height: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html.fullpage-scroll::-webkit-scrollbar,
+  body.fullpage-scroll::-webkit-scrollbar,
+  html:has([data-fullpage-root])::-webkit-scrollbar,
+  body:has([data-fullpage-root])::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  body.fullpage-scroll,
+  body:has([data-fullpage-root]) {
+    overscroll-behavior-y: none;
+  }
+
+  html.fullpage-scroll [data-fullpage-root] > section,
+  html.fullpage-scroll [data-fullpage-root] > footer,
+  html:has([data-fullpage-root]) [data-fullpage-root] > section,
+  html:has([data-fullpage-root]) [data-fullpage-root] > footer {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  html.fullpage-scroll [data-fullpage-root] > section:not([data-fullpage-noheight]),
+  html.fullpage-scroll [data-fullpage-root] > footer:not([data-fullpage-noheight]),
+  html:has([data-fullpage-root]) [data-fullpage-root] > section:not([data-fullpage-noheight]),
+  html:has([data-fullpage-root]) [data-fullpage-root] > footer:not([data-fullpage-noheight]) {
+    min-height: 100svh;
+  }
 }
 
-html.fullpage-scroll,
-body.fullpage-scroll,
-html:has([data-fullpage-root]),
-body:has([data-fullpage-root]) {
-  height: 100%;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-html.fullpage-scroll::-webkit-scrollbar,
-body.fullpage-scroll::-webkit-scrollbar,
-html:has([data-fullpage-root])::-webkit-scrollbar,
-body:has([data-fullpage-root])::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-body.fullpage-scroll,
-body:has([data-fullpage-root]) {
-  overscroll-behavior-y: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
   html.fullpage-scroll,
   html:has([data-fullpage-root]) {
     scroll-behavior: auto;
     scroll-snap-type: none;
   }
+}
 
+@media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
@@ -97,21 +116,6 @@ body:has([data-fullpage-root]) {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-html.fullpage-scroll [data-fullpage-root] > section,
-html.fullpage-scroll [data-fullpage-root] > footer,
-html:has([data-fullpage-root]) [data-fullpage-root] > section,
-html:has([data-fullpage-root]) [data-fullpage-root] > footer {
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-}
-
-html.fullpage-scroll [data-fullpage-root] > section:not([data-fullpage-noheight]),
-html.fullpage-scroll [data-fullpage-root] > footer:not([data-fullpage-noheight]),
-html:has([data-fullpage-root]) [data-fullpage-root] > section:not([data-fullpage-noheight]),
-html:has([data-fullpage-root]) [data-fullpage-root] > footer:not([data-fullpage-noheight]) {
-  min-height: 100svh;
 }
 
 *,
