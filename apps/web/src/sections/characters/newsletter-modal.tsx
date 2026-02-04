@@ -20,12 +20,11 @@ export function NewsletterModal({
   accentColor,
 }: NewsletterModalProps) {
   const { email, setEmail, status, message, handleSubmit, reset } = useNewsletterModal(characterId)
-
-  if (!isOpen) return null
-
   const titleId = useId()
   const descriptionId = useId()
   const emailId = useId()
+
+  if (!isOpen) return null
   const handleClose = () => {
     reset()
     onClose()
