@@ -5,6 +5,7 @@ import { SITE_DESCRIPTION } from "@/lib/seo"
 import { deduplicateById } from "@/utils/deduplicate-by-id"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
 import { CharacterPageContent } from "./character-page-content"
+import { SERVER_API_URL } from "@/lib/env/server"
 
 interface CharacterComicsResponse {
   data: Comic[] | null
@@ -19,9 +20,7 @@ interface CharacterPageProps {
 
 async function getCharacterComics(slug: string): Promise<CharacterComicsResponse | null> {
   try {
-    const apiUrl =
-      process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-    const response = await fetch(`${apiUrl}/api/characters/${slug}/comics`)
+    const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics`)
 
     if (!response.ok) {
       return null

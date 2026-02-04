@@ -1,8 +1,9 @@
 import Image from "next/image"
+import { SERVER_API_URL } from "@/lib/env/server"
 
 const DRIVE_URL = "https://drive.google.com/file/d/1-8SAoB2wPI3rEH3bdwMjWTOHKooxQlGQ/view"
 const READ_ONLINE_URL = "/ler/dc-all-in"
-const DOWNLOAD_URL = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/proxy/download?url=${encodeURIComponent(DRIVE_URL)}`
+const DOWNLOAD_URL = `${SERVER_API_URL}/api/proxy/download?url=${encodeURIComponent(DRIVE_URL)}`
 
 export default function WhereToStart() {
   return (

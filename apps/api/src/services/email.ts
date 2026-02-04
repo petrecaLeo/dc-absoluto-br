@@ -3,15 +3,23 @@ import { Resend } from "resend"
 let resend: Resend | null = null
 let lastEmailSentAt = 0
 const EMAIL_DELAY_MS = 1000
-const DEFAULT_API_BASE_URL =
-  process.env.API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  process.env.API_URL ??
-  "http://localhost:3001"
-const SITE_URL = "https://dcabsoluto.com.br"
+const API_BASE_URL =
+  process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL
+const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL
+
+function requireEnv(label: string, value?: string) {
+  if (!value) {
+    throw new Error(`Env não configurada: ${label}`)
+  }
+  return value
+}
 
 function getApiBaseUrl() {
-  return DEFAULT_API_BASE_URL.replace(/\/+$/, "")
+  return requireEnv("API_BASE_URL", API_BASE_URL).replace(/\/+$/, "")
+}
+
+function getSiteUrl() {
+  return requireEnv("SITE_URL", SITE_URL).replace(/\/+$/, "")
 }
 
 function getResend() {
@@ -106,7 +114,7 @@ export async function sendNewComicEmail({
         <div style="background: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 16px 0;">
           <p style="font-size: 18px; font-weight: bold; margin: 0;">${comicTitle}</p>
         </div>
-        <p><a href="${SITE_URL}" style="color: #60a5fa; text-decoration: none;">Acesse o site para conferir!</a></p>
+        <p><a href="${getSiteUrl()}" style="color: #60a5fa; text-decoration: none;">Acesse o site para conferir!</a></p>
         <hr style="border-color: #333; margin: 24px 0;" />
         <p style="font-size: 12px; color: #888;">Você recebeu este e-mail porque se inscreveu para receber novidades de ${characterName}. <a href="${unsubscribeUrl}" style="color: #9ca3af; text-decoration: underline;">Desinscrever</a></p>
       </div>
@@ -141,7 +149,7 @@ export async function sendNewsletterNewComicEmail({
         <div style="background: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #e62429; margin: 16px 0;">
           <p style="font-size: 18px; font-weight: bold; margin: 0;">${comicTitle}</p>
         </div>
-        <p><a href="${SITE_URL}" style="color: #60a5fa; text-decoration: none;">Acesse o site para conferir!</a></p>
+        <p><a href="${getSiteUrl()}" style="color: #60a5fa; text-decoration: none;">Acesse o site para conferir!</a></p>
         <hr style="border-color: #333; margin: 24px 0;" />
         <p style="font-size: 12px; color: #888;">Você recebeu este e-mail porque se inscreveu na newsletter do DC Absoluto BR. <a href="${unsubscribeUrl}" style="color: #9ca3af; text-decoration: underline;">Desinscrever</a></p>
       </div>

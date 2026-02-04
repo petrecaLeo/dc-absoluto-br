@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { useState } from "react"
+import { PUBLIC_API_URL } from "@/lib/env/public"
 
 export interface LatestComic {
   id: string
@@ -17,7 +18,7 @@ interface LatestLaunchProps {
   comic: LatestComic | null
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+const API_URL = PUBLIC_API_URL
 
 function formatReleaseDate(releaseDate?: string | Date | null): string | null {
   if (!releaseDate) return null

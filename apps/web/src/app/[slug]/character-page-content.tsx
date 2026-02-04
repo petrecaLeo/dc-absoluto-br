@@ -22,6 +22,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
 import { useComicsFilter } from "./use-comics-filter"
+import { PUBLIC_API_URL } from "@/lib/env/public"
 
 interface CharacterPageContentProps {
   slug: string
@@ -84,7 +85,7 @@ export function CharacterPageContent({
   hasError,
 }: CharacterPageContentProps) {
   const latestComic = getLatestComic(comics)
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+  const apiUrl = PUBLIC_API_URL
 
   return (
     <main id="main-content" tabIndex={-1} className="min-h-svh bg-dc-black">

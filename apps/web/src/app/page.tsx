@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 
 import type { LatestComic } from "@/sections/home/latest-launch"
 import { PageContent } from "./page-content"
+import { SERVER_API_URL } from "@/lib/env/server"
 
 export const metadata: Metadata = {
   alternates: {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   },
 }
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+const API_URL = SERVER_API_URL
 const LATEST_COMIC_REVALIDATE_SECONDS = 60 * 60 * 24
 
 async function getLatestComic(): Promise<LatestComic | null> {

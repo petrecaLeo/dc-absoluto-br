@@ -1,8 +1,5 @@
 import type { Character } from "@dc-absoluto/shared-types"
-
-const SERVER_API_URL =
-  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-const CLIENT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+import { SERVER_API_URL } from "@/lib/env/server"
 const CACHE_REVALIDATE_SECONDS = 60 * 60 * 24 * 7 // 1 semana
 const MAX_RETRIES = 1
 const RETRY_DELAY_MS = 1000
@@ -46,16 +43,6 @@ export async function getCharacters(): Promise<CharactersResponse> {
   const response = await fetchWithRetry(`${SERVER_API_URL}/api/characters`, {
     next: { revalidate: CACHE_REVALIDATE_SECONDS },
   })
-
-  return response.json()
-}
-
-export async function getCharactersClient(): Promise<CharactersResponse> {
-  const response = await fetch(`${CLIENT_API_URL}/api/characters`)
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch characters: ${response.status}`)
-  }
 
   return response.json()
 }

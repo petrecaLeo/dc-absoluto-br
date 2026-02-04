@@ -1,6 +1,6 @@
 "use client"
 
-import { getCharactersClient } from "@/services/characters"
+import { getCharactersClient } from "@/services/characters.client"
 import { useQuery } from "@tanstack/react-query"
 
 type QueryState = "initial" | "loading" | "error" | "empty" | "success"

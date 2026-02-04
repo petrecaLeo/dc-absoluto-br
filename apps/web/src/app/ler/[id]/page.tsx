@@ -1,5 +1,6 @@
 import { ComicReader } from "@/components/comic-reader"
 import type { Comic } from "@dc-absoluto/shared-types"
+import { SERVER_API_URL } from "@/lib/env/server"
 
 interface ComicResponse {
   data: Comic | null
@@ -12,8 +13,7 @@ interface ReaderPageProps {
 }
 
 async function getComic(id: string): Promise<ComicResponse | null> {
-  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
-  const response = await fetch(`${apiUrl}/api/comics/${id}`, {
+  const response = await fetch(`${SERVER_API_URL}/api/comics/${id}`, {
     next: { revalidate: 3600 },
   })
 

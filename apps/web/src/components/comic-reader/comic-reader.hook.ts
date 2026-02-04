@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { readingProgress } from "@/services/reading-progress"
+import { PUBLIC_API_URL } from "@/lib/env/public"
 
 interface ComicPage {
   name: string
@@ -584,8 +585,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
         setProgress(0)
         setError(null)
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-        const proxyUrl = `${apiUrl}/api/proxy/download?url=${encodeURIComponent(downloadUrl)}`
+        const proxyUrl = `${PUBLIC_API_URL}/api/proxy/download?url=${encodeURIComponent(downloadUrl)}`
         const response = await fetch(proxyUrl)
 
         if (!response.ok) {

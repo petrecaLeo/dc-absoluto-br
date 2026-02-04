@@ -1,8 +1,9 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { PUBLIC_API_URL } from "@/lib/env/public"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+const API_URL = PUBLIC_API_URL
 const MAX_CHARACTERS = 2000
 
 export function useReport() {
