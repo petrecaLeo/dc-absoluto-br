@@ -1,0 +1,27 @@
+FROM oven/bun:1.1-alpine
+
+RUN apk add --no-cache nodejs npm && npm install -g pnpm
+
+WORKDIR /app
+
+# Workspace setup
+COPY package.json pnpm-workspace.yaml tsconfig.json .npmrc ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/shared-schemas/package.json ./packages/shared-schemas/
+
+# Install deps
+RUN pnpm install --frozen-lockfile
+
+# Copy source
+COPY apps/api ./apps/api
+COPY packages ./packages
+
+WORKDIR /app/apps/api
+
+# Build API
+RUN pnpm build
+
+EXPOSE 3001
+
+CMD ["pnpm", "start"]
