@@ -40,6 +40,8 @@ export default function Home({ latestComic }: HomeProps) {
             alt="DC Absoluto BR"
             width={200}
             height={200}
+            priority
+            fetchPriority="high"
             className="mx-auto mb-4 sm:ml-auto sm:mr-0"
           />
 
