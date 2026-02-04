@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+*.md
+.env*
+.turbo
+dist
+.next
+coverage

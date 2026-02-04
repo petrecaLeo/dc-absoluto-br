@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1769292069617,
+      "tag": "0000_true_nightshade",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769480053793,
+      "tag": "0001_short_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769480100000,
+      "tag": "0002_update_comics_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769560000000,
+      "tag": "0003_add_character_newsletter_subscribers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769630000000,
+      "tag": "0004_add_junction_table_pk",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "comics" ADD COLUMN "download_url" varchar(500);

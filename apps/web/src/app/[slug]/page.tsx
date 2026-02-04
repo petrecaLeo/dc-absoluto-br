@@ -1,0 +1,113 @@
+import type { Metadata } from "next"
+
+import { getCharacterImages } from "@/constants/character-images"
+import { SITE_DESCRIPTION } from "@/lib/seo"
+import { deduplicateById } from "@/utils/deduplicate-by-id"
+import type { Character, Comic } from "@dc-absoluto/shared-types"
+import { CharacterPageContent } from "./character-page-content"
+
+interface CharacterComicsResponse {
+  data: Comic[] | null
+  character: Character
+  total: number
+  message?: string
+}
+
+interface CharacterPageProps {
+  params: Promise<{ slug: string }>
+}
+
+async function getCharacterComics(slug: string): Promise<CharacterComicsResponse | null> {
+  try {
+    const apiUrl =
+      process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+    const response = await fetch(`${apiUrl}/api/characters/${slug}/comics`)
+
+    if (!response.ok) {
+      return null
+    }
+
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function generateMetadata({ params }: CharacterPageProps): Promise<Metadata> {
+  const { slug } = await params
+  const result = await getCharacterComics(slug)
+  const theme = getCharacterImages(slug)
+  const characterName = result?.character?.name
+
+  if (!characterName) {
+    return {
+      title: "Personagem nao encontrado",
+      description: SITE_DESCRIPTION,
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
+  }
+
+  const description = `Explore as HQs de ${characterName} no Universo Absolute da DC. Veja edicoes, capas e downloads em portugues.`
+
+  return {
+    title: characterName,
+    description,
+    alternates: {
+      canonical: `/${slug}`,
+    },
+    openGraph: {
+      title: characterName,
+      description,
+      url: `/${slug}`,
+      type: "website",
+      images: [
+        {
+          url: theme.image,
+          alt: characterName,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: characterName,
+      description,
+      images: [theme.image],
+    },
+  }
+}
+
+export default async function CharacterPage({ params }: CharacterPageProps) {
+  const { slug } = await params
+  const result = await getCharacterComics(slug)
+  const characterTheme = getCharacterImages(slug)
+
+  if (!result || !result.data) {
+    return (
+      <CharacterPageContent
+        slug={slug}
+        character={null}
+        comics={[]}
+        total={0}
+        theme={characterTheme}
+        hasError={!result}
+      />
+    )
+  }
+
+  const { character, data: comics } = result
+  const uniqueComics = deduplicateById(comics)
+
+  return (
+    <CharacterPageContent
+      slug={slug}
+      character={character}
+      comics={uniqueComics}
+      total={uniqueComics.length}
+      theme={characterTheme}
+      hasError={false}
+    />
+  )
+}
