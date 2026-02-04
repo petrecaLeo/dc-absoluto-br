@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useComicReader } from "./comic-reader.hook"
 import { ResumeReadingModal } from "./resume-reading-modal"
 
@@ -63,6 +64,35 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
   const controlsHidden = isFullscreenActive && !showControls
   const fullscreenButtonTitle = isFullscreenActive ? "Sair da tela cheia (F)" : "Tela cheia (F)"
   const doublePageButtonTitle = isDoublePageMode ? "Página simples (D)" : "Página dupla (D)"
+  const headerRef = useRef<HTMLElement>(null)
+  const footerRef = useRef<HTMLElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
+  const [footerHeight, setFooterHeight] = useState(0)
+
+  const updateHeaderFooterHeights = useCallback(() => {
+    setHeaderHeight(headerRef.current?.getBoundingClientRect().height ?? 0)
+    setFooterHeight(footerRef.current?.getBoundingClientRect().height ?? 0)
+  }, [])
+
+  useEffect(() => {
+    updateHeaderFooterHeights()
+  }, [updateHeaderFooterHeights, isFullscreenActive, controlsHidden, comicTitle])
+
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateHeaderFooterHeights)
+      return () => window.removeEventListener("resize", updateHeaderFooterHeights)
+    }
+
+    const observer = new ResizeObserver(updateHeaderFooterHeights)
+    if (headerRef.current) observer.observe(headerRef.current)
+    if (footerRef.current) observer.observe(footerRef.current)
+
+    return () => observer.disconnect()
+  }, [updateHeaderFooterHeights])
+
+  const mainPaddingTop = isFullscreenActive && !controlsHidden ? headerHeight : 0
+  const mainPaddingBottom = isFullscreenActive && !controlsHidden ? footerHeight : 0
 
   if (loadingState === "idle" || loadingState === "loading" || loadingState === "extracting") {
     return (
@@ -165,6 +195,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
         onClose={handleStartOverReading}
       />
       <header
+        ref={headerRef}
         className={`fixed top-0 left-0 right-0 z-50 flex flex-wrap items-center gap-2 border-b border-white/5 bg-dc-black/80 px-4 py-3 backdrop-blur-xl transition-all duration-300 md:flex-nowrap md:justify-between ${
           isFullscreenActive ? "pt-[calc(env(safe-area-inset-top)+0.75rem)]" : ""
         } ${controlsHidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
@@ -248,7 +279,14 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex flex-1 items-center justify-center overflow-hidden ${isFullscreenActive ? "pt-0 pb-0" : "pt-24 pb-24 md:pt-14"}`}
+        style={
+          isFullscreenActive
+            ? { paddingTop: mainPaddingTop, paddingBottom: mainPaddingBottom }
+            : undefined
+        }
+        className={`flex flex-1 items-center justify-center overflow-hidden ${
+          isFullscreenActive ? "" : "pt-24 pb-24 md:pt-14"
+        }`}
       >
         {currentPageData && (
           <div
@@ -292,7 +330,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
                 alt={`Página ${currentPage + 1}`}
                 width={isDoublePageMode ? 600 : 800}
                 height={isDoublePageMode ? 900 : 1200}
-                className={`pointer-events-none w-auto select-none object-contain transition-transform duration-100 ${isFullscreenActive ? "max-h-[100svh]" : "max-h-[calc(100svh-152px)]"} ${isDoublePageMode ? "max-w-[50vw]" : ""}`}
+                className={`pointer-events-none w-auto select-none object-contain transition-transform duration-100 ${isFullscreenActive ? "max-h-full" : "max-h-[calc(100svh-152px)]"} ${isDoublePageMode ? "max-w-[50vw]" : ""}`}
                 priority
                 unoptimized
                 draggable={false}
@@ -303,7 +341,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
                   alt={`Página ${currentPage + 2}`}
                   width={600}
                   height={900}
-                  className={`pointer-events-none max-w-[50vw] w-auto select-none object-contain transition-transform duration-100 ${isFullscreenActive ? "max-h-[100svh]" : "max-h-[calc(100svh-152px)]"}`}
+                  className={`pointer-events-none max-w-[50vw] w-auto select-none object-contain transition-transform duration-100 ${isFullscreenActive ? "max-h-full" : "max-h-[calc(100svh-152px)]"}`}
                   priority
                   unoptimized
                   draggable={false}
@@ -315,6 +353,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
       </main>
 
       <footer
+        ref={footerRef}
         className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-dc-black/80 px-4 py-4 backdrop-blur-xl transition-all duration-300 ${
           isFullscreenActive ? "pb-[calc(env(safe-area-inset-bottom)+1rem)]" : ""
         } ${controlsHidden ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
