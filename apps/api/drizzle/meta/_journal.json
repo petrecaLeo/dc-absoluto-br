@@ -36,6 +36,13 @@
       "when": 1769630000000,
       "tag": "0004_add_junction_table_pk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770312519409,
+      "tag": "0005_add_users",
+      "breakpoints": true
     }
   ]
 }

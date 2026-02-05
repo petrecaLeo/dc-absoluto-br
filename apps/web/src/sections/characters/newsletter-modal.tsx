@@ -10,6 +10,8 @@ interface NewsletterModalProps {
   characterId: string
   characterName: string
   accentColor: string
+  prefilledEmail?: string | null
+  isEmailLocked?: boolean
 }
 
 export function NewsletterModal({
@@ -18,8 +20,23 @@ export function NewsletterModal({
   characterId,
   characterName,
   accentColor,
+  prefilledEmail,
+  isEmailLocked = false,
 }: NewsletterModalProps) {
-  const { email, setEmail, status, message, handleSubmit, reset } = useNewsletterModal(characterId)
+  const {
+    email,
+    setEmail,
+    status,
+    message,
+    isCheckingSubscription,
+    isAlreadySubscribed,
+    handleSubmit,
+    reset,
+  } = useNewsletterModal(
+    characterId,
+    prefilledEmail,
+    isOpen,
+  )
   const titleId = useId()
   const descriptionId = useId()
   const emailId = useId()
@@ -126,55 +143,75 @@ export function NewsletterModal({
                 <p className="font-semibold text-white">{message}</p>
               </div>
             ) : (
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div className="group relative">
-                  <label htmlFor={emailId} className="sr-only">
-                    E-mail
-                  </label>
-                  <input
-                    id={emailId}
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    required
-                    autoComplete="email"
-                    autoFocus
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2"
-                    style={
-                      {
-                        "--tw-ring-color": accentColor,
-                      } as React.CSSProperties
-                    }
-                  />
-                </div>
+              <>
+                {isCheckingSubscription ? (
+                  <div className="flex items-center gap-3 text-sm text-gray-400">
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                      aria-hidden="true"
+                    />
+                    <span>Verificando sua inscrição...</span>
+                  </div>
+                ) : (
+                  <form onSubmit={handleFormSubmit} className="space-y-4">
+                    <div className="group relative">
+                      <label htmlFor={emailId} className="sr-only">
+                        E-mail
+                      </label>
+                      <input
+                        id={emailId}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        required
+                        disabled={isEmailLocked || isAlreadySubscribed}
+                        aria-disabled={isEmailLocked || isAlreadySubscribed}
+                        autoComplete="email"
+                        autoFocus
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2 disabled:cursor-not-allowed disabled:text-white/60"
+                        style={
+                          {
+                            "--tw-ring-color": accentColor,
+                          } as React.CSSProperties
+                        }
+                      />
+                    </div>
 
-                {status === "error" && (
-                  <p role="alert" className="text-sm text-red-400">
-                    {message}
-                  </p>
+                    {status === "error" && (
+                      <p role="alert" className="text-sm text-red-400">
+                        {message}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={status === "loading" || isAlreadySubscribed}
+                      className="group relative w-full cursor-pointer overflow-hidden rounded-xl py-4 font-bold uppercase tracking-wider text-white transition-all duration-300 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{
+                        background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
+                        boxShadow: `0 4px 24px ${accentColor}40`,
+                      }}
+                    >
+                      <span className="relative z-10">
+                        {status === "loading" ? "Inscrevendo..." : "Quero ser avisado"}
+                      </span>
+                      <div
+                        className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        style={{
+                          background: `linear-gradient(135deg, ${accentColor}ee, ${accentColor})`,
+                        }}
+                      />
+                    </button>
+
+                    {isAlreadySubscribed && (
+                      <p role="status" className="text-sm text-emerald-400">
+                        Não se preocupe, você já está por dentro das atualizações.
+                      </p>
+                    )}
+                  </form>
                 )}
-
-                <button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="group relative w-full cursor-pointer overflow-hidden rounded-xl py-4 font-bold uppercase tracking-wider text-white transition-all duration-300 hover:shadow-lg disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
-                    boxShadow: `0 4px 24px ${accentColor}40`,
-                  }}
-                >
-                  <span className="relative z-10">
-                    {status === "loading" ? "Inscrevendo..." : "Quero ser avisado"}
-                  </span>
-                  <div
-                    className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    style={{
-                      background: `linear-gradient(135deg, ${accentColor}ee, ${accentColor})`,
-                    }}
-                  />
-                </button>
-              </form>
+              </>
             )}
           </div>
         </div>

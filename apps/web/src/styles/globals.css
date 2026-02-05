@@ -19,6 +19,21 @@ body {
   font-family: var(--font-inter, system-ui), sans-serif;
 }
 
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  transition: background-color 600000s 0s, color 600000s 0s;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.04) inset;
+}
+
 [id] {
   scroll-margin-top: 96px;
 }

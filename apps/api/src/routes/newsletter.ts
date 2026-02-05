@@ -106,6 +106,34 @@ export const newsletter = new Elysia({ prefix: "/newsletter" })
     },
   )
   .get(
+    "/character/subscription",
+    async ({ query }) => {
+      if (!isDbAvailable) {
+        return { subscribed: false }
+      }
+
+      const existing = await db!
+        .select({ id: characterNewsletterSubscribers.id })
+        .from(characterNewsletterSubscribers)
+        .where(
+          and(
+            eq(characterNewsletterSubscribers.email, query.email),
+            eq(characterNewsletterSubscribers.characterId, query.characterId),
+            eq(characterNewsletterSubscribers.isActive, true),
+          ),
+        )
+        .limit(1)
+
+      return { subscribed: existing.length > 0 }
+    },
+    {
+      query: t.Object({
+        email: t.String({ format: "email" }),
+        characterId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+  .get(
     "/unsubscribe/:id",
     async ({ params: { id }, set }) => {
       if (!isDbAvailable) {

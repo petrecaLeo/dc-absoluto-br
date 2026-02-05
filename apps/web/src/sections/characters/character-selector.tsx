@@ -2,10 +2,14 @@
 
 import type { Character } from "@dc-absoluto/shared-types"
 import Image from "next/image"
+import { useEffect, useState } from "react"
 
 import { type CharacterWithImages, useCharacters } from "./characters.hook"
 import { NewsletterModal } from "./newsletter-modal"
 import { ParticleEffect } from "./particle-effect"
+import type { AuthUser } from "@/components/header/auth.types"
+import { getStoredUser, storeUser, subscribeAuthChanges } from "@/components/header/auth.storage"
+import { LoginModal } from "@/components/header/login-modal"
 
 interface CharacterSelectorProps {
   characters: Character[]
@@ -23,6 +27,32 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
     handleOpenNewsletterModal,
     handleCloseNewsletterModal,
   } = useCharacters(characters)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+
+  useEffect(() => {
+    setAuthUser(getStoredUser())
+    const unsubscribe = subscribeAuthChanges(setAuthUser)
+    return () => unsubscribe()
+  }, [])
+
+  const handleNotificationsClick = () => {
+    const user = getStoredUser()
+    if (user) {
+      setAuthUser(user)
+      handleOpenNewsletterModal()
+      return
+    }
+
+    setIsLoginModalOpen(true)
+  }
+
+  const handleAuthSuccess = (user: AuthUser) => {
+    storeUser(user)
+    setAuthUser(user)
+    setIsLoginModalOpen(false)
+    handleOpenNewsletterModal()
+  }
 
   return (
     <div className="relative h-svh w-full overflow-hidden">
@@ -129,7 +159,7 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
                 )}
                 <button
                   type="button"
-                  onClick={handleOpenNewsletterModal}
+                  onClick={handleNotificationsClick}
                   className="group mt-3 flex cursor-pointer items-center gap-2 text-sm text-gray-300 transition-colors duration-200 hover:text-white"
                 >
                   <svg
@@ -213,8 +243,16 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
           characterId={selectedCharacter.id}
           characterName={selectedCharacter.name}
           accentColor={selectedCharacter.images.accentColor}
+          prefilledEmail={authUser?.email}
+          isEmailLocked={Boolean(authUser?.email)}
         />
       )}
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   )
 }
