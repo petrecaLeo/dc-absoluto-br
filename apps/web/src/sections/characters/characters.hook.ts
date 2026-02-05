@@ -45,6 +45,7 @@ export function useCharacters(characters: Character[] | null) {
       const prefetchNext = () => {
         if (cancelled || index >= charactersWithImages.length) return
         const character = charactersWithImages[index]
+        if (!character) return
         router.prefetch(`/${character.slug}`)
         index += 1
         timeoutId = setTimeout(prefetchNext, 100)
