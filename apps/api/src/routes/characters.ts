@@ -49,6 +49,8 @@ export const characters = new Elysia({ prefix: "/characters" })
       .where(eq(comicsToCharacters.characterId, character[0].id))
       .orderBy(asc(comics.releaseDate))
 
+    set.headers["Cache-Control"] = "public, max-age=180, stale-while-revalidate=60"
+
     return {
       data: characterComics,
       character: character[0],

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { cache } from "react"
 
 import { getCharacterImages } from "@/constants/character-images"
 import { SITE_DESCRIPTION } from "@/lib/seo"
@@ -14,13 +15,17 @@ interface CharacterComicsResponse {
   message?: string
 }
 
+export const revalidate = 180
+
 interface CharacterPageProps {
   params: Promise<{ slug: string }>
 }
 
-async function getCharacterComics(slug: string): Promise<CharacterComicsResponse | null> {
+const getCharacterComics = cache(async (slug: string): Promise<CharacterComicsResponse | null> => {
   try {
-    const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics`)
+    const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics`, {
+      next: { revalidate },
+    })
 
     if (!response.ok) {
       return null
@@ -30,7 +35,7 @@ async function getCharacterComics(slug: string): Promise<CharacterComicsResponse
   } catch {
     return null
   }
-}
+})
 
 export async function generateMetadata({ params }: CharacterPageProps): Promise<Metadata> {
   const { slug } = await params

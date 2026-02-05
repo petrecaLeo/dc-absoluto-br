@@ -2,7 +2,7 @@
 
 import type { Character } from "@dc-absoluto/shared-types"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { type CharacterImages, getCharacterImages } from "@/constants/character-images"
 
@@ -27,6 +27,11 @@ export function useCharacters(characters: Character[] | null) {
   const selectedCharacter = useMemo(() => {
     return charactersWithImages[selectedIndex] || null
   }, [charactersWithImages, selectedIndex])
+
+  useEffect(() => {
+    if (!selectedCharacter) return
+    router.prefetch(`/${selectedCharacter.slug}`)
+  }, [router, selectedCharacter])
 
   const handleSelectCharacter = useCallback((index: number) => {
     setSelectedIndex(index)
