@@ -33,6 +33,34 @@ export function useCharacters(characters: Character[] | null) {
     router.prefetch(`/${selectedCharacter.slug}`)
   }, [router, selectedCharacter])
 
+  useEffect(() => {
+    if (charactersWithImages.length === 0) return
+
+    let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const prefetchInOrder = () => {
+      let index = 0
+
+      const prefetchNext = () => {
+        if (cancelled || index >= charactersWithImages.length) return
+        const character = charactersWithImages[index]
+        router.prefetch(`/${character.slug}`)
+        index += 1
+        timeoutId = setTimeout(prefetchNext, 100)
+      }
+
+      prefetchNext()
+    }
+
+    timeoutId = setTimeout(prefetchInOrder, 100)
+
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [charactersWithImages, router])
+
   const handleSelectCharacter = useCallback((index: number) => {
     setSelectedIndex(index)
   }, [])
