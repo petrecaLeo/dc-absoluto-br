@@ -178,7 +178,7 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
                 ? `Carregando página de leitura de ${selectedCharacter.name}`
                 : `Começar leitura com ${selectedCharacter.name}`
             }
-            className="animate-btn-glow w-fit cursor-pointer rounded-xl px-14 py-3 text-lg font-black tracking-widest text-white uppercase transition-all duration-300 hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
+            className="animate-btn-glow w-fit cursor-pointer rounded-xl px-14 py-3 text-lg font-black tracking-widest text-white uppercase transition-all duration-300 hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 disabled:cursor-wait"
             style={{
               backgroundImage: `linear-gradient(to right, ${selectedCharacter.images.gradientFrom}, ${selectedCharacter.images.gradientTo}, #000)`,
               backgroundSize: "200% 200%",
