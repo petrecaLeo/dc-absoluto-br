@@ -18,6 +18,7 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
     selectedIndex,
     handleSelectCharacter,
     handleStartReading,
+    isStartingReading,
     isNewsletterModalOpen,
     handleOpenNewsletterModal,
     handleCloseNewsletterModal,
@@ -169,15 +170,39 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
             type="button"
             onClick={handleStartReading}
             data-testid="start-reading-button"
-            aria-label={`Começar leitura com ${selectedCharacter.name}`}
-            className="animate-btn-glow w-fit cursor-pointer rounded-xl px-14 py-3 text-lg font-black tracking-widest text-white uppercase transition-all duration-300 hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2"
+            disabled={isStartingReading}
+            aria-busy={isStartingReading}
+            aria-disabled={isStartingReading}
+            aria-label={
+              isStartingReading
+                ? `Carregando página de leitura de ${selectedCharacter.name}`
+                : `Começar leitura com ${selectedCharacter.name}`
+            }
+            className="animate-btn-glow w-fit cursor-pointer rounded-xl px-14 py-3 text-lg font-black tracking-widest text-white uppercase transition-all duration-300 hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
             style={{
               backgroundImage: `linear-gradient(to right, ${selectedCharacter.images.gradientFrom}, ${selectedCharacter.images.gradientTo}, #000)`,
               backgroundSize: "200% 200%",
             }}
           >
-            Começar Leitura
+            {isStartingReading ? (
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  aria-hidden="true"
+                />
+                Carregando...
+              </span>
+            ) : (
+              "Começar Leitura"
+            )}
           </button>
+        )}
+        {selectedCharacter && (
+          <span className="sr-only" role="status" aria-live="polite">
+            {isStartingReading
+              ? `Carregando página de leitura de ${selectedCharacter.name}`
+              : null}
+          </span>
         )}
       </div>
 

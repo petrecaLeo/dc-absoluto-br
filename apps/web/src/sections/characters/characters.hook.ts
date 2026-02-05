@@ -14,6 +14,7 @@ export function useCharacters(characters: Character[] | null) {
   const router = useRouter()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isNewsletterModalOpen, setIsNewsletterModalOpen] = useState(false)
+  const [isStartingReading, setIsStartingReading] = useState(false)
 
   const charactersWithImages = useMemo(() => {
     if (!characters) return []
@@ -32,10 +33,10 @@ export function useCharacters(characters: Character[] | null) {
   }, [])
 
   const handleStartReading = useCallback(() => {
-    if (selectedCharacter) {
-      router.push(`/${selectedCharacter.slug}`)
-    }
-  }, [selectedCharacter, router])
+    if (!selectedCharacter || isStartingReading) return
+    setIsStartingReading(true)
+    router.push(`/${selectedCharacter.slug}`)
+  }, [selectedCharacter, isStartingReading, router])
 
   const handleOpenNewsletterModal = useCallback(() => {
     setIsNewsletterModalOpen(true)
@@ -51,6 +52,7 @@ export function useCharacters(characters: Character[] | null) {
     selectedIndex,
     handleSelectCharacter,
     handleStartReading,
+    isStartingReading,
     isNewsletterModalOpen,
     handleOpenNewsletterModal,
     handleCloseNewsletterModal,
