@@ -1,11 +1,56 @@
 "use client"
 
 import Image from "next/image"
+import { type FormEvent, useEffect, useState } from "react"
 
 import { useNewsletter } from "./newsletter.hook"
+import type { AuthUser } from "@/components/header/auth.types"
+import { getStoredUser, storeUser, subscribeAuthChanges } from "@/components/header/auth.storage"
+import { LoginModal } from "@/components/header/login-modal"
 
 export default function Newsletter() {
-  const { email, setEmail, status, message, handleSubmit } = useNewsletter()
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+
+  useEffect(() => {
+    setAuthUser(getStoredUser())
+    const unsubscribe = subscribeAuthChanges(setAuthUser)
+    return () => unsubscribe()
+  }, [])
+
+  const {
+    email,
+    setEmail,
+    status,
+    message,
+    isCheckingSubscription,
+    isAlreadySubscribed,
+    handleSubmit,
+  } = useNewsletter({
+    prefilledEmail: authUser?.email ?? null,
+  })
+
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault()
+
+    if (!authUser) {
+      setIsLoginModalOpen(true)
+      return
+    }
+
+    if (isAlreadySubscribed || isCheckingSubscription) return
+    handleSubmit()
+  }
+
+  const handleAuthSuccess = (user: AuthUser) => {
+    storeUser(user)
+    setAuthUser(user)
+    setIsLoginModalOpen(false)
+  }
+
+  const isEmailLocked = Boolean(authUser?.email)
+  const isInputDisabled = status === "loading" || isEmailLocked || isAlreadySubscribed
+  const isButtonDisabled = status === "loading" || isAlreadySubscribed || isCheckingSubscription
 
   return (
     <section
@@ -56,7 +101,7 @@ export default function Newsletter() {
             direto no seu e-mail.
           </p>
 
-          <form onSubmit={handleSubmit} className="mb-6">
+          <form onSubmit={handleFormSubmit} className="mb-6">
             <label htmlFor="newsletter-email" className="sr-only">
               E-mail
             </label>
@@ -67,13 +112,14 @@ export default function Newsletter() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={status === "loading"}
+                disabled={isInputDisabled}
+                aria-disabled={isInputDisabled}
                 autoComplete="email"
                 className="animate-border-color w-full rounded-xl border-3 bg-white px-5 py-3 text-lg text-dc-dark shadow-sm transition-shadow duration-300 placeholder:text-dc-dark/60 focus:shadow-md focus:shadow-lime-500/20 focus:outline-none disabled:opacity-50"
               />
               <button
                 type="submit"
-                disabled={status === "loading"}
+                disabled={isButtonDisabled}
                 className="animate-btn-glow w-full cursor-pointer rounded-xl bg-linear-to-r from-lime-600 via-blue-600 to-green-500 px-8 py-3 text-xl font-black tracking-widest text-white uppercase transition-all duration-300 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
               >
                 {status === "loading" ? "CARREGANDO" : "INSCREVER-SE"}
@@ -82,6 +128,23 @@ export default function Newsletter() {
           </form>
 
           <div aria-live="polite" className="min-h-7">
+            {isCheckingSubscription && (
+              <div className="animate-fade-in flex items-center gap-2 text-sm text-dc-dark/70">
+                <span
+                  className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-dc-dark/40 border-t-dc-dark"
+                  aria-hidden="true"
+                />
+                <p className="font-semibold">Verificando sua inscrição...</p>
+              </div>
+            )}
+            {isAlreadySubscribed && !isCheckingSubscription && (
+              <div className="animate-fade-in flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                <p className="text-sm font-semibold text-emerald-700">
+                  Não se preocupe, você já está inscrito na newsletter.
+                </p>
+              </div>
+            )}
             {status === "success" && (
               <div className="animate-fade-in flex items-center gap-2">
                 <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
@@ -97,6 +160,11 @@ export default function Newsletter() {
           </div>
         </div>
       </div>
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </section>
   )
 }

@@ -5,6 +5,15 @@ import * as matchers from "vitest-axe/matchers"
 
 expect.extend(matchers)
 
+process.env.NEXT_PUBLIC_API_URL ??= "http://localhost:3001"
+process.env.NEXT_PUBLIC_SITE_URL ??= "http://localhost:3000"
+process.env.API_URL ??= process.env.NEXT_PUBLIC_API_URL
+process.env.SITE_URL ??= process.env.NEXT_PUBLIC_SITE_URL
+
+if (typeof window !== "undefined") {
+  window.scrollTo = () => {}
+}
+
 if (typeof HTMLCanvasElement !== "undefined") {
   const noop = () => {}
   Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {

@@ -56,6 +56,12 @@ interface ReportEmailParams {
   message: string
 }
 
+interface EmailVerificationParams {
+  to: string
+  name: string
+  token: string
+}
+
 export async function sendReportEmail({ message }: ReportEmailParams) {
   const client = getResend()
   if (!client) {
@@ -82,6 +88,59 @@ export async function sendReportEmail({ message }: ReportEmailParams) {
       </div>
     `,
   })
+}
+
+export async function sendEmailVerificationEmail({
+  to,
+  name,
+  token,
+}: EmailVerificationParams) {
+  const client = getResend()
+  if (!client) {
+    console.log("[Email] Resend client não configurado, pulando envio de confirmação")
+    return null
+  }
+
+  try {
+    await waitForRateLimit()
+    console.log(`[Email] Enviando confirmação de e-mail para ${to}...`)
+    const confirmUrl = `${getSiteUrl()}/confirmar-email?token=${encodeURIComponent(token)}`
+
+    const result = await client.emails.send({
+      from: process.env.RESEND_FROM_EMAIL ?? "DC Absoluto BR <noreply@dcabsoluto.com.br>",
+      to,
+      subject: "Confirme seu e-mail para entrar no DC Absoluto BR",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 32px;">
+          <h1 style="color: #e62429; margin-bottom: 8px;">DC Absoluto BR</h1>
+          <h2 style="margin-top: 0;">Bem-vindo, ${name}!</h2>
+          <p>Seu cadastro está quase pronto. Falta apenas confirmar o seu e-mail para liberar o acesso completo à plataforma.</p>
+          <div style="margin: 24px 0;">
+            <a href="${confirmUrl}" style="display: inline-block; background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 42%, #dc2626 75%, #facc15 100%); color: #ffffff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase;">
+              Confirmar e-mail
+            </a>
+          </div>
+          <p style="margin: 0 0 8px;">O link expira em 24 horas.</p>
+          <p style="font-size: 12px; color: #888; margin: 0;">
+            Se você não solicitou este cadastro, ignore este e-mail.
+          </p>
+          <hr style="border-color: #333; margin: 24px 0;" />
+          <p style="font-size: 12px; color: #888;">Caso o botão não funcione, copie e cole este link no navegador:</p>
+        <p style="font-size: 12px; color: #9ca3af; word-break: break-all;">${confirmUrl}</p>
+      </div>
+    `,
+    })
+
+    if ("error" in result && result.error) {
+      console.error("[Email] Resend retornou erro ao enviar confirmação:", result.error)
+      return null
+    }
+
+    return result
+  } catch (error) {
+    console.error("[Email] Erro ao enviar confirmação de e-mail:", error)
+    return null
+  }
 }
 
 export async function sendNewComicEmail({

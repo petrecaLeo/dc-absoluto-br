@@ -1,7 +1,7 @@
 import { getServerAuthUser } from "./auth.server"
 import { HeaderClient } from "./header-client"
 
-export function Header() {
-  const authUser = getServerAuthUser()
+export async function Header() {
+  const authUser = await getServerAuthUser()
   return <HeaderClient initialAuthUser={authUser} />
 }

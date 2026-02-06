@@ -33,26 +33,64 @@ function hasScrollableParent(target: Element | null) {
 export function FullPageScroll() {
   const lockRef = useRef(false)
   const timeoutRef = useRef<number | null>(null)
+  const offsetsRafRef = useRef<number | null>(null)
   const rootRef = useRef<HTMLElement | null>(null)
+  const sectionsRef = useRef<HTMLElement[]>([])
+  const sectionOffsetsRef = useRef<number[]>([])
 
   useEffect(() => {
     const supportsFullPage = window.matchMedia("(hover: hover) and (pointer: fine)").matches
     if (!supportsFullPage) return
 
     rootRef.current = document.querySelector<HTMLElement>("[data-fullpage-root]")
+    if (!rootRef.current) return
 
     const root = document.documentElement
     const body = document.body
     root.classList.add("fullpage-scroll")
     body.classList.add("fullpage-scroll")
 
-    const getSections = () => {
-      if (!rootRef.current) return []
-      return Array.from(rootRef.current.children).filter((child) => {
+    const getSections = () =>
+      Array.from(rootRef.current?.children ?? []).filter((child) => {
         const tag = child.tagName.toLowerCase()
         return tag === "section" || tag === "footer"
       }) as HTMLElement[]
+
+    const updateSectionOffsets = () => {
+      const sections = sectionsRef.current
+      sectionOffsetsRef.current = sections.map(
+        (section) => section.getBoundingClientRect().top + window.scrollY,
+      )
     }
+
+    const scheduleOffsetsUpdate = () => {
+      if (offsetsRafRef.current !== null) {
+        window.cancelAnimationFrame(offsetsRafRef.current)
+      }
+      offsetsRafRef.current = window.requestAnimationFrame(() => {
+        offsetsRafRef.current = null
+        updateSectionOffsets()
+      })
+    }
+
+    const updateSections = () => {
+      sectionsRef.current = getSections()
+      scheduleOffsetsUpdate()
+    }
+
+    updateSections()
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(scheduleOffsetsUpdate)
+    resizeObserver?.observe(rootRef.current)
+
+    const mutationObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(updateSections)
+    mutationObserver?.observe(rootRef.current, { childList: true })
 
     const handleWheel = (event: WheelEvent) => {
       if (lockRef.current) return
@@ -64,19 +102,25 @@ export function FullPageScroll() {
         return
       }
 
-      const sections = getSections()
+      const sections = sectionsRef.current
       if (sections.length === 0) return
 
       event.preventDefault()
       lockRef.current = true
 
-      const currentIndex = sections.reduce((closestIndex, section, index) => {
-        const closestSection = sections[closestIndex]
-        if (!closestSection) return index
-        const offset = Math.abs(section.getBoundingClientRect().top)
-        const closestOffset = Math.abs(closestSection.getBoundingClientRect().top)
-        return offset < closestOffset ? index : closestIndex
-      }, 0)
+      const offsets = sectionOffsetsRef.current
+      const scrollTop = window.scrollY
+      let currentIndex = 0
+      let closestDistance = Number.POSITIVE_INFINITY
+      for (let i = 0; i < offsets.length; i += 1) {
+        const offset = offsets[i]
+        if (offset === undefined) continue
+        const distance = Math.abs(offset - scrollTop)
+        if (distance < closestDistance) {
+          closestDistance = distance
+          currentIndex = i
+        }
+      }
 
       const direction = event.deltaY > 0 ? 1 : -1
       const nextIndex = Math.max(0, Math.min(sections.length - 1, currentIndex + direction))
@@ -90,11 +134,18 @@ export function FullPageScroll() {
     }
 
     window.addEventListener("wheel", handleWheel, { passive: false })
+    window.addEventListener("resize", scheduleOffsetsUpdate)
 
     return () => {
       window.removeEventListener("wheel", handleWheel)
+      window.removeEventListener("resize", scheduleOffsetsUpdate)
       root.classList.remove("fullpage-scroll")
       body.classList.remove("fullpage-scroll")
+      resizeObserver?.disconnect()
+      mutationObserver?.disconnect()
+      if (offsetsRafRef.current !== null) {
+        window.cancelAnimationFrame(offsetsRafRef.current)
+      }
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     }
   }, [])

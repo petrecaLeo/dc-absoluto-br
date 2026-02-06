@@ -1,5 +1,6 @@
 "use client"
 
+import type { AuthUser } from "@/components/header/auth.types"
 import type { CharacterImages } from "@/constants/character-images"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
 import {
@@ -9,6 +10,7 @@ import {
   ArrowUp,
   BookOpen,
   BookX,
+  Check,
   Download,
   Loader2,
   Sparkles,
@@ -18,7 +20,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
 import { useComicsFilter } from "./use-comics-filter"
@@ -31,6 +33,8 @@ interface CharacterPageContentProps {
   total: number
   theme: CharacterImages
   hasError: boolean
+  authUser: AuthUser | null
+  readComicIds: string[]
 }
 
 const characterSynopsisBySlug: Record<string, string> = {
@@ -67,6 +71,12 @@ function hasReadingInProgress(progress: ReadingProgress | null) {
   return progress.page + 1 < progress.totalPages - READING_COMPLETION_BUFFER
 }
 
+function isProgressForUser(progress: ReadingProgress | null, authUser: AuthUser | null) {
+  if (!progress) return false
+  if (!authUser) return !progress.userId
+  return progress.userId === authUser.id
+}
+
 function getLatestComic(comics: Comic[]): Comic | null {
   if (comics.length === 0) return null
   return comics.reduce((latest, comic) => {
@@ -83,6 +93,8 @@ export function CharacterPageContent({
   total,
   theme,
   hasError,
+  authUser,
+  readComicIds,
 }: CharacterPageContentProps) {
   const latestComic = getLatestComic(comics)
   const apiUrl = PUBLIC_API_URL
@@ -120,6 +132,8 @@ export function CharacterPageContent({
               theme={theme}
               latestComic={latestComic}
               apiUrl={apiUrl}
+              authUser={authUser}
+              readComicIds={readComicIds}
             />
           </>
         ) : (
@@ -212,12 +226,16 @@ function ComicsGrid({
   theme,
   latestComic,
   apiUrl,
+  authUser,
+  readComicIds,
 }: {
   comics: Comic[]
   slug: string
   theme: CharacterImages
   latestComic: Comic | null
   apiUrl: string
+  authUser: AuthUser | null
+  readComicIds: string[]
 }) {
   const {
     sortOrder,
@@ -228,6 +246,8 @@ function ComicsGrid({
     setEditionFilter,
   } = useComicsFilter(comics)
   const [readingProgressMap, setReadingProgressMap] = useState<Record<string, ReadingProgress>>({})
+  const [readingFilter, setReadingFilter] = useState<"read" | "unread" | null>(null)
+  const didInitialProgressLoad = useRef(false)
 
   const refreshReadingProgress = useCallback(() => {
     const nextMap: Record<string, ReadingProgress> = {}
@@ -242,8 +262,17 @@ function ComicsGrid({
     setReadingProgressMap(nextMap)
   }, [comics])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (didInitialProgressLoad.current) return
     refreshReadingProgress()
+    didInitialProgressLoad.current = true
+  }, [refreshReadingProgress])
+
+  useEffect(() => {
+    if (!didInitialProgressLoad.current) {
+      refreshReadingProgress()
+      didInitialProgressLoad.current = true
+    }
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -261,6 +290,22 @@ function ComicsGrid({
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }, [refreshReadingProgress])
+
+  const hasReadComics = useMemo(() => {
+    return authUser ? readComicIds.length > 0 : false
+  }, [authUser, readComicIds])
+
+  const readComicIdsSet = useMemo(() => new Set(readComicIds), [readComicIds])
+
+  const visibleComics = useMemo(() => {
+    if (!authUser || !readingFilter || !hasReadComics) return sortedComics
+
+    return sortedComics.filter((comic) => {
+      const readStatus = readComicIdsSet.has(comic.id)
+
+      return readingFilter === "read" ? readStatus : !readStatus
+    })
+  }, [authUser, hasReadComics, readComicIdsSet, readingFilter, sortedComics])
 
   return (
     <section className="mt-6 px-4 pb-6 sm:px-6">
@@ -306,20 +351,52 @@ function ComicsGrid({
               </div>
             </div>
           )}
+          {authUser && hasReadComics && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <span className="text-sm font-medium text-white/70">Status de leitura:</span>
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                <FilterButton
+                  isActive={readingFilter === "read"}
+                  onClick={() =>
+                    setReadingFilter((current) => (current === "read" ? null : "read"))
+                  }
+                  theme={theme}
+                  label="Lidos"
+                  icon="book"
+                />
+                <FilterButton
+                  isActive={readingFilter === "unread"}
+                  onClick={() =>
+                    setReadingFilter((current) => (current === "unread" ? null : "unread"))
+                  }
+                  theme={theme}
+                  label="Não lidos"
+                  icon="book-x"
+                />
+              </div>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {sortedComics.map((comic, index) => (
-            <ComicCard
-              key={comic.id}
-              comic={comic}
-              slug={slug}
-              theme={theme}
-              isLatest={latestComic?.id === comic.id}
-              hasReadingInProgress={hasReadingInProgress(readingProgressMap[comic.id] ?? null)}
-              index={index}
-              apiUrl={apiUrl}
-            />
-          ))}
+          {visibleComics.map((comic, index) => {
+            const progress = readingProgressMap[comic.id] ?? null
+            const isOwnedProgress = isProgressForUser(progress, authUser)
+            const isRead = Boolean(authUser && readComicIdsSet.has(comic.id))
+
+            return (
+              <ComicCard
+                key={comic.id}
+                comic={comic}
+                slug={slug}
+                theme={theme}
+                isLatest={latestComic?.id === comic.id}
+                hasReadingInProgress={isOwnedProgress && hasReadingInProgress(progress)}
+                isRead={isRead}
+                index={index}
+                apiUrl={apiUrl}
+              />
+            )
+          })}
         </div>
       </div>
     </section>
@@ -372,7 +449,7 @@ function FilterButton({
   onClick: () => void
   theme: CharacterImages
   label: string
-  icon: "star" | "book"
+  icon: "star" | "book" | "book-x"
 }) {
   const activeClass = "border-white/30 text-white"
   const inactiveClass = "border-white/10 text-white/70 hover:border-white/20 hover:text-white"
@@ -392,6 +469,8 @@ function FilterButton({
           style={{ color: theme.accentColor }}
           fill={isActive ? theme.accentColor : "none"}
         />
+      ) : icon === "book-x" ? (
+        <BookX className="h-4 w-4" style={{ color: theme.accentColor }} />
       ) : (
         <BookOpen className="h-4 w-4" style={{ color: theme.accentColor }} />
       )}
@@ -406,6 +485,7 @@ function ComicCard({
   theme,
   isLatest,
   hasReadingInProgress,
+  isRead,
   index,
   apiUrl,
 }: {
@@ -414,6 +494,7 @@ function ComicCard({
   theme: CharacterImages
   isLatest: boolean
   hasReadingInProgress: boolean
+  isRead: boolean
   index: number
   apiUrl: string
 }) {
@@ -438,6 +519,14 @@ function ComicCard({
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-dc-gold px-3 py-1 text-xs font-bold text-dc-black">
           <Sparkles className="h-3 w-3" />
           NOVO
+        </div>
+      )}
+      {isRead && (
+        <div
+          className="absolute top-3 left-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.45)]"
+          title="Lido"
+        >
+          <Check className="h-4 w-4 text-white" />
         </div>
       )}
 

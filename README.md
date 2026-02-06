@@ -48,9 +48,14 @@ Crie um arquivo `.env` na raiz do projeto:
 DATABASE_URL=postgres://usuario:senha@host/banco
 API_BASE_URL=http://localhost:3001
 NEXT_PUBLIC_API_URL=http://localhost:3001
+SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+RESEND_API_KEY=seu_token_resend
+RESEND_FROM_EMAIL="DC Absoluto BR <noreply@dcabsoluto.com.br>"
 ```
 
 `API_BASE_URL` é usado para gerar links públicos nos e-mails (ex.: desinscrição).
+`SITE_URL` é usado para gerar links públicos do site (ex.: confirmação de e-mail).
 
 ## Executando o Projeto
 

@@ -1,8 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { readingProgress } from "@/services/reading-progress"
+import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
 
 interface ComicPage {
   name: string
@@ -25,6 +26,20 @@ const PRELOAD_BEHIND = 2
 const SCROLL_THRESHOLD = 60
 const SCROLL_COOLDOWN_MS = 250
 const SCROLL_RESET_DELAY_MS = 140
+const READING_COMPLETION_BUFFER = 5
+
+function getAuthUserFromCookie() {
+  if (typeof document === "undefined") return null
+
+  const rawCookie = document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith(`${AUTH_COOKIE_KEY}=`))
+
+  if (!rawCookie) return null
+
+  const value = rawCookie.substring(`${AUTH_COOKIE_KEY}=`.length)
+  return decodeAuthCookie(value)
+}
 
 export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicReaderProps) {
   const [pages, setPages] = useState<ComicPage[]>([])
@@ -64,6 +79,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   const [resumePage, setResumePage] = useState<number | null>(null)
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false)
   const resumeHandledRef = useRef(false)
+  const hasMarkedReadRef = useRef(false)
 
   const totalPages = pages.length
   const isFirstPage = currentPage === 0
@@ -74,6 +90,17 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   const isFullscreenActive = isFullscreen || isPseudoFullscreen
   const nextPageData =
     isDoublePageMode && currentPage + 1 < totalPages ? pages[currentPage + 1] : null
+
+  const authUserId = getAuthUserFromCookie()?.id ?? null
+
+  const isProgressForUser = useCallback(
+    (progress: ReadingProgress | null) => {
+      if (!progress) return false
+      if (!authUserId) return !progress.userId
+      return progress.userId === authUserId
+    },
+    [authUserId],
+  )
 
   const resetZoom = useCallback(() => {
     setZoomLevel(1)
@@ -422,6 +449,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
 
   useEffect(() => {
     resumeHandledRef.current = false
+    hasMarkedReadRef.current = false
   }, [comicId])
 
   useEffect(() => {
@@ -435,6 +463,11 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
       return
     }
 
+    if (!isProgressForUser(savedProgress)) {
+      resumeHandledRef.current = true
+      return
+    }
+
     if (savedProgress.page > 0 && savedProgress.page < totalPages) {
       setResumePage(savedProgress.page)
       setIsResumeModalOpen(true)
@@ -443,7 +476,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     }
 
     resumeHandledRef.current = true
-  }, [comicId, loadingState, totalPages])
+  }, [comicId, isProgressForUser, loadingState, totalPages])
 
   const prevPageRef = useRef(currentPage)
   useEffect(() => {
@@ -461,12 +494,38 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     }
 
     if (currentPage === 0) {
-      readingProgress.clearProgress(comicId)
+      const existingProgress = readingProgress.getProgress(comicId)
+      if (!existingProgress || isProgressForUser(existingProgress)) {
+        readingProgress.clearProgress(comicId)
+      }
       return
     }
 
-    readingProgress.setProgress(comicId, currentPage, totalPages)
-  }, [comicId, currentPage, isResumeModalOpen, loadingState, totalPages])
+    readingProgress.setProgress(comicId, currentPage, totalPages, authUserId)
+  }, [authUserId, comicId, currentPage, isResumeModalOpen, isProgressForUser, loadingState, totalPages])
+
+  useEffect(() => {
+    if (!authUserId || !comicId || loadingState !== "ready" || totalPages === 0) {
+      return
+    }
+
+    if (hasMarkedReadRef.current) return
+
+    const completionThreshold =
+      totalPages <= READING_COMPLETION_BUFFER
+        ? totalPages
+        : totalPages - READING_COMPLETION_BUFFER
+
+    if (currentPage + 1 < completionThreshold) return
+
+    hasMarkedReadRef.current = true
+
+    void fetch(`/api/comics/${comicId}/read`, {
+      method: "POST",
+    }).catch(() => {
+      // silencioso para o usuário
+    })
+  }, [authUserId, comicId, currentPage, loadingState, totalPages])
 
   const getTouchDistance = useCallback((touches: React.TouchList) => {
     const firstTouch = touches.item(0)

@@ -66,10 +66,24 @@ export function useLoginModal() {
 
       const data = await response.json()
 
-      if (response.ok && data.user) {
+      if (response.ok) {
+        if (data.user) {
+          setStatus("success")
+          setMessage(data.message ?? "Login realizado.")
+          return data.user as AuthUser
+        }
+
         setStatus("success")
-        setMessage(data.message ?? "Login realizado.")
-        return data.user as AuthUser
+        setMessage(
+          data.message ??
+            (mode === "signup"
+              ? "Enviamos um e-mail de confirmação. Confira sua caixa de entrada."
+              : "Ação concluída."),
+        )
+        if (mode === "signup") {
+          setPassword("")
+        }
+        return null
       }
 
       setStatus("error")
@@ -81,6 +95,41 @@ export function useLoginModal() {
       return null
     }
   }, [API_URL, email, mode, name, password, validate])
+
+  const resendVerification = useCallback(async () => {
+    if (!emailRegex.test(email.trim())) {
+      setStatus("error")
+      setMessage("Digite um e-mail válido para reenviar a confirmação.")
+      return
+    }
+
+    setStatus("loading")
+    setMessage("")
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        setStatus("success")
+        setMessage(
+          data.message ?? "Reenviamos o e-mail de confirmação. Confira sua caixa de entrada.",
+        )
+        return
+      }
+
+      setStatus("error")
+      setMessage(data.message ?? "Não foi possível reenviar a confirmação.")
+    } catch {
+      setStatus("error")
+      setMessage("Erro de conexão. Tente novamente.")
+    }
+  }, [API_URL, email])
 
   const reset = useCallback(() => {
     setMode("login")
@@ -112,6 +161,7 @@ export function useLoginModal() {
     status,
     message,
     submit,
+    resendVerification,
     reset,
     emailPattern: EMAIL_PATTERN,
     passwordPattern: PASSWORD_PATTERN,

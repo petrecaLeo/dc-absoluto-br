@@ -34,6 +34,12 @@ services:
       - NODE_ENV=development
       - PORT=3001
       - DATABASE_URL=${DATABASE_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
+      - API_BASE_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - SITE_URL=http://localhost:3000
+      - NEXT_PUBLIC_SITE_URL=http://localhost:3000
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
       interval: 5s

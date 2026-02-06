@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { axe, render, screen } from "@/test/utils"
 
+vi.mock("@/components", () => ({
+  FullPageScroll: function MockFullPageScroll() {
+    return <div data-testid="fullpage-scroll" />
+  },
+  Header: function MockHeader() {
+    return <header data-testid="header" />
+  },
+}))
+
 vi.mock("@/sections/characters", () => ({
   default: function MockCharacters() {
     return (

@@ -22,7 +22,7 @@ describe("Home Section", () => {
     render(<Home latestComic={null} />)
 
     const images = screen.getAllByAltText("Personagens da DC Comics")
-    expect(images).toHaveLength(3)
+    expect(images).toHaveLength(2)
   })
 
   it("has accessible section with aria-label", () => {

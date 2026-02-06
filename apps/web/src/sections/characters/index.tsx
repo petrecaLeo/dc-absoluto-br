@@ -18,6 +18,7 @@ export default async function Characters() {
       id="characters"
       aria-labelledby="characters-heading"
       tabIndex={-1}
+      data-fullpage-ignore
       className="relative overflow-hidden bg-dc-dark"
     >
       {hasError ? (

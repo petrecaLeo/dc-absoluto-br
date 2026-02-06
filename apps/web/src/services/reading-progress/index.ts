@@ -47,11 +47,12 @@ export interface ReadingProgress {
   page: number
   totalPages: number
   updatedAt: string
+  userId?: string | null
 }
 
 export interface ReadingProgressService {
   getProgress: (comicId: string) => ReadingProgress | null
-  setProgress: (comicId: string, page: number, totalPages: number) => void
+  setProgress: (comicId: string, page: number, totalPages: number, userId?: string | null) => void
   clearProgress: (comicId: string) => void
 }
 
@@ -82,12 +83,13 @@ export function createReadingProgressService(
         return null
       }
     },
-    setProgress(comicId, page, totalPages) {
+    setProgress(comicId, page, totalPages, userId) {
       const payload: ReadingProgress = {
         comicId,
         page,
         totalPages,
         updatedAt: new Date().toISOString(),
+        userId: userId ?? null,
       }
 
       storage.setItem(buildKey(comicId), JSON.stringify(payload))

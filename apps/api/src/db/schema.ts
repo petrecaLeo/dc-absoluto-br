@@ -77,3 +77,27 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
+
+export const userEmailVerifications = pgTable("user_email_verifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const userReadComics = pgTable(
+  "user_read_comics",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    comicId: uuid("comic_id")
+      .notNull()
+      .references(() => comics.id),
+    readAt: timestamp("read_at").defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.comicId] })],
+)

@@ -32,4 +32,24 @@ describe("Newsletter endpoints", () => {
       expect(response.status).toBe(422)
     })
   })
+
+  describe("GET /api/newsletter/subscription", () => {
+    it("returns subscription status for a valid email", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/api/newsletter/subscription?email=teste@exemplo.com"),
+      )
+      const body = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(body.subscribed).toBe(false)
+    })
+
+    it("rejects invalid email", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/api/newsletter/subscription?email=invalid-email"),
+      )
+
+      expect(response.status).toBe(422)
+    })
+  })
 })

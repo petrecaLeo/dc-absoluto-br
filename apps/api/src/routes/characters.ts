@@ -1,7 +1,14 @@
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { Elysia } from "elysia"
 import { db, isDbAvailable } from "../db"
-import { characters as charactersTable, comics, comicsToCharacters } from "../db/schema"
+import {
+  characters as charactersTable,
+  comics,
+  comicsToCharacters,
+  userReadComics,
+  users,
+} from "../db/schema"
+import { getAuthUserFromRequest } from "../utils/auth"
 
 export const characters = new Elysia({ prefix: "/characters" })
   .get("/", async ({ set }) => {
@@ -12,6 +19,57 @@ export const characters = new Elysia({ prefix: "/characters" })
 
     const allCharacters = await db!.select().from(charactersTable)
     return { data: allCharacters, total: allCharacters.length }
+  })
+  .get("/:slug/comics/read", async ({ params: { slug }, set, request }) => {
+    set.headers["Cache-Control"] = "private, max-age=0, no-store"
+
+    if (!isDbAvailable) {
+      set.status = 503
+      return { data: [], message: "Banco indisponível" }
+    }
+
+    const authUser = getAuthUserFromRequest(request)
+    if (!authUser) {
+      set.status = 401
+      return { data: [], message: "Usuário não autenticado" }
+    }
+
+    const [dbUser] = await db!
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, authUser.email))
+      .limit(1)
+
+    if (!dbUser) {
+      set.status = 401
+      return { data: [], message: "Usuário não autenticado" }
+    }
+
+    const character = await db!
+      .select()
+      .from(charactersTable)
+      .where(eq(charactersTable.slug, slug))
+      .limit(1)
+
+    if (character.length === 0) {
+      set.status = 404
+      return { data: [], message: "Personagem não encontrado" }
+    }
+
+    const readComics = await db!
+      .select({
+        comicId: userReadComics.comicId,
+      })
+      .from(userReadComics)
+      .innerJoin(comicsToCharacters, eq(userReadComics.comicId, comicsToCharacters.comicId))
+      .where(
+        and(
+          eq(userReadComics.userId, dbUser.id),
+          eq(comicsToCharacters.characterId, character[0].id),
+        ),
+      )
+
+    return { data: readComics.map((row) => row.comicId) }
   })
   .get("/:slug/comics", async ({ params: { slug }, set }) => {
     if (!isDbAvailable) {

@@ -1,6 +1,9 @@
 import type { Metadata } from "next"
 import { cache } from "react"
+import { cookies } from "next/headers"
 
+import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
+import { getServerAuthUser } from "@/components/header/auth.server"
 import { getCharacterImages } from "@/constants/character-images"
 import { SITE_DESCRIPTION } from "@/lib/seo"
 import { deduplicateById } from "@/utils/deduplicate-by-id"
@@ -36,6 +39,29 @@ const getCharacterComics = cache(async (slug: string): Promise<CharacterComicsRe
     return null
   }
 })
+
+async function getReadComicsByCharacter(
+  slug: string,
+  authCookieValue: string | undefined,
+): Promise<string[]> {
+  if (!authCookieValue) return []
+
+  try {
+    const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics/read`, {
+      cache: "no-store",
+      headers: {
+        cookie: `${AUTH_COOKIE_KEY}=${authCookieValue}`,
+      },
+    })
+
+    if (!response.ok) return []
+
+    const payload = (await response.json()) as { data?: string[] | null }
+    return payload.data ?? []
+  } catch {
+    return []
+  }
+}
 
 export async function generateMetadata({ params }: CharacterPageProps): Promise<Metadata> {
   const { slug } = await params
@@ -87,6 +113,12 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   const { slug } = await params
   const result = await getCharacterComics(slug)
   const characterTheme = getCharacterImages(slug)
+  const authUser = await getServerAuthUser()
+  const cookieStore = await cookies()
+  const authCookieValue = cookieStore.get(AUTH_COOKIE_KEY)?.value
+  const readComicIds = authUser
+    ? await getReadComicsByCharacter(slug, authCookieValue)
+    : []
 
   if (!result || !result.data) {
     return (
@@ -97,6 +129,8 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
         total={0}
         theme={characterTheme}
         hasError={!result}
+        authUser={authUser}
+        readComicIds={readComicIds}
       />
     )
   }
@@ -112,6 +146,8 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
       total={uniqueComics.length}
       theme={characterTheme}
       hasError={false}
+      authUser={authUser}
+      readComicIds={readComicIds}
     />
   )
 }
