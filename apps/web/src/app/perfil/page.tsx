@@ -4,6 +4,7 @@ import { getServerAuthUser } from "@/components/header/auth.server"
 import { PerfilHeader } from "./perfil-header"
 import { PerfilConquistas } from "./perfil-conquistas"
 import { PerfilHqsLidas } from "./perfil-hqs-lidas"
+import { PerfilSenha } from "./perfil-senha"
 
 export default async function PerfilPage() {
   const authUser = await getServerAuthUser()
@@ -25,6 +26,7 @@ export default async function PerfilPage() {
         </section>
         <PerfilConquistas />
         <PerfilHqsLidas />
+        <PerfilSenha />
       </main>
     </div>
   )

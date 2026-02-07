@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia"
 import { db, isDbAvailable } from "../db"
 import { userEmailVerifications, users } from "../db/schema"
 import { sendEmailVerificationEmail } from "../services/email"
+import { getAuthUserFromRequest } from "../utils/auth"
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
 const PASSWORD_PATTERN = "^(?=.*\\d).{6,}$"
@@ -187,6 +188,70 @@ export const auth = new Elysia({ prefix: "/auth" })
       body: t.Object({
         email: t.String({ format: "email", pattern: EMAIL_PATTERN }),
         password: t.String({ minLength: 6, maxLength: 128 }),
+      }),
+    },
+  )
+  .post(
+    "/change-password",
+    async ({ body, request, set }) => {
+      const authUser = getAuthUserFromRequest(request)
+      if (!authUser) {
+        set.status = 401
+        return { success: false, message: "Usuário não autenticado." }
+      }
+
+      if (!isDbAvailable) {
+        return { success: true, message: "Senha alterada (ambiente sem banco)." }
+      }
+
+      try {
+        const [user] = await db!
+          .select()
+          .from(users)
+          .where(eq(users.email, authUser.email))
+          .limit(1)
+
+        if (!user) {
+          set.status = 401
+          return { success: false, message: "Usuário não autenticado." }
+        }
+
+        const isPasswordValid = await Bun.password.verify(
+          body.currentPassword,
+          user.passwordHash,
+        )
+
+        if (!isPasswordValid) {
+          set.status = 401
+          return { success: false, message: "Senha atual inválida." }
+        }
+
+        if (body.currentPassword === body.newPassword) {
+          set.status = 400
+          return {
+            success: false,
+            message: "A nova senha precisa ser diferente da senha atual.",
+          }
+        }
+
+        const passwordHash = await Bun.password.hash(body.newPassword)
+
+        await db!
+          .update(users)
+          .set({ passwordHash, updatedAt: new Date() })
+          .where(eq(users.id, user.id))
+
+        return { success: true, message: "Senha alterada com sucesso." }
+      } catch (error) {
+        console.error("Erro ao alterar senha:", error)
+        set.status = 500
+        return { success: false, message: "Erro ao alterar senha." }
+      }
+    },
+    {
+      body: t.Object({
+        currentPassword: t.String({ minLength: 6, maxLength: 128 }),
+        newPassword: t.String({ minLength: 6, maxLength: 128, pattern: PASSWORD_PATTERN }),
       }),
     },
   )
