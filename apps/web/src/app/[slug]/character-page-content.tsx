@@ -34,7 +34,12 @@ interface CharacterPageContentProps {
   theme: CharacterImages
   hasError: boolean
   authUser: AuthUser | null
-  readComicIds: string[]
+  readComics: ReadComicEntry[]
+}
+
+interface ReadComicEntry {
+  comicId: string
+  readAt: string
 }
 
 const characterSynopsisBySlug: Record<string, string> = {
@@ -94,7 +99,7 @@ export function CharacterPageContent({
   theme,
   hasError,
   authUser,
-  readComicIds,
+  readComics,
 }: CharacterPageContentProps) {
   const latestComic = getLatestComic(comics)
   const apiUrl = PUBLIC_API_URL
@@ -133,7 +138,7 @@ export function CharacterPageContent({
               latestComic={latestComic}
               apiUrl={apiUrl}
               authUser={authUser}
-              readComicIds={readComicIds}
+              readComics={readComics}
             />
           </>
         ) : (
@@ -227,7 +232,7 @@ function ComicsGrid({
   latestComic,
   apiUrl,
   authUser,
-  readComicIds,
+  readComics,
 }: {
   comics: Comic[]
   slug: string
@@ -235,7 +240,7 @@ function ComicsGrid({
   latestComic: Comic | null
   apiUrl: string
   authUser: AuthUser | null
-  readComicIds: string[]
+  readComics: ReadComicEntry[]
 }) {
   const {
     sortOrder,
@@ -246,6 +251,7 @@ function ComicsGrid({
     setEditionFilter,
   } = useComicsFilter(comics)
   const [readingProgressMap, setReadingProgressMap] = useState<Record<string, ReadingProgress>>({})
+  const [readComicsState, setReadComicsState] = useState<ReadComicEntry[]>(() => readComics)
   const [readingFilter, setReadingFilter] = useState<"read" | "unread" | null>(null)
   const didInitialProgressLoad = useRef(false)
 
@@ -292,10 +298,43 @@ function ComicsGrid({
   }, [refreshReadingProgress])
 
   const hasReadComics = useMemo(() => {
-    return authUser ? readComicIds.length > 0 : false
-  }, [authUser, readComicIds])
+    return authUser ? readComicsState.length > 0 : false
+  }, [authUser, readComicsState])
 
+  const readComicIds = useMemo(
+    () => readComicsState.map((entry) => entry.comicId),
+    [readComicsState],
+  )
   const readComicIdsSet = useMemo(() => new Set(readComicIds), [readComicIds])
+  const readComicDates = useMemo(
+    () => new Map(readComicsState.map((entry) => [entry.comicId, entry.readAt])),
+    [readComicsState],
+  )
+
+  const handleMarkComicRead = useCallback(
+    async (comicId: string) => {
+      if (!authUser) return false
+
+      try {
+        const response = await fetch(`/api/comics/${comicId}/read`, {
+          method: "POST",
+        })
+
+        if (!response.ok) return false
+
+        const optimisticReadAt = new Date().toISOString()
+        setReadComicsState((prev) => {
+          if (prev.some((entry) => entry.comicId === comicId)) return prev
+          return [...prev, { comicId, readAt: optimisticReadAt }]
+        })
+
+        return true
+      } catch {
+        return false
+      }
+    },
+    [authUser, slug],
+  )
 
   const visibleComics = useMemo(() => {
     if (!authUser || !readingFilter || !hasReadComics) return sortedComics
@@ -382,6 +421,7 @@ function ComicsGrid({
             const progress = readingProgressMap[comic.id] ?? null
             const isOwnedProgress = isProgressForUser(progress, authUser)
             const isRead = Boolean(authUser && readComicIdsSet.has(comic.id))
+            const readAt = readComicDates.get(comic.id)
 
             return (
               <ComicCard
@@ -392,6 +432,9 @@ function ComicsGrid({
                 isLatest={latestComic?.id === comic.id}
                 hasReadingInProgress={isOwnedProgress && hasReadingInProgress(progress)}
                 isRead={isRead}
+                readAt={readAt}
+                canManageRead={Boolean(authUser)}
+                onMarkRead={handleMarkComicRead}
                 index={index}
                 apiUrl={apiUrl}
               />
@@ -486,6 +529,9 @@ function ComicCard({
   isLatest,
   hasReadingInProgress,
   isRead,
+  readAt,
+  canManageRead,
+  onMarkRead,
   index,
   apiUrl,
 }: {
@@ -495,17 +541,32 @@ function ComicCard({
   isLatest: boolean
   hasReadingInProgress: boolean
   isRead: boolean
+  readAt?: string
+  canManageRead: boolean
+  onMarkRead: (comicId: string) => Promise<boolean>
   index: number
   apiUrl: string
 }) {
   const isNew = isLatest && isNewComic(comic.releaseDate)
   const [isLoading, setIsLoading] = useState(false)
+  const [isMarkingRead, setIsMarkingRead] = useState(false)
   const router = useRouter()
 
   function handleReadOnline() {
     setIsLoading(true)
     router.push(`/ler/${comic.id}?from=${slug}`)
   }
+
+  async function handleMarkRead() {
+    if (isMarkingRead || isRead) return
+    setIsMarkingRead(true)
+    const marked = await onMarkRead(comic.id)
+    if (!marked) {
+      setIsMarkingRead(false)
+    }
+  }
+
+  const readDateLabel = formatReadDate(readAt)
 
   return (
     <article
@@ -583,42 +644,86 @@ function ComicCard({
           )}
         </div>
 
-        {comic.downloadUrl && (
-          <div className="mt-auto flex flex-col gap-1.5 pt-3 sm:flex-row sm:gap-2">
-            <button
-              type="button"
-              onClick={handleReadOnline}
-              disabled={isLoading}
-              aria-busy={isLoading}
-              aria-label={isLoading ? "Carregando página de leitura" : undefined}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-white transition-all duration-300 hover:brightness-110 disabled:cursor-wait disabled:opacity-80"
-              style={{ backgroundColor: theme.accentColor }}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+        {(canManageRead || comic.downloadUrl) && (
+          <div className="mt-auto flex flex-col gap-2 pt-3">
+            {canManageRead &&
+              (isRead ? (
+                <p
+                  className="text-xs font-semibold"
+                  style={{ color: theme.accentColor }}
+                >
+                  Lido em: {readDateLabel || "--/--/----"}
+                </p>
               ) : (
-                <>
-                  <BookOpen className="h-4 w-4" />
-                  <span className="sm:hidden">Ler</span>
-                  <span className="hidden sm:inline">Ler Online</span>
-                </>
-              )}
-            </button>
-            <a
-              aria-label={`Baixar HQ ${comic.title}`}
-              href={`${apiUrl}/api/proxy/download?url=${encodeURIComponent(comic.downloadUrl)}`}
-              download
-              title="Download"
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs font-medium text-white/60 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
-            >
-              <Download className="h-4 w-4" />
-              <span className="sm:hidden">Baixar</span>
-            </a>
+                <button
+                  type="button"
+                  onClick={handleMarkRead}
+                  disabled={isMarkingRead}
+                  aria-busy={isMarkingRead}
+                  className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wide transition-all duration-300 disabled:cursor-wait disabled:opacity-80"
+                  style={{
+                    borderColor: `${theme.accentColor}55`,
+                    backgroundColor: `${theme.accentColor}18`,
+                    color: theme.accentColor,
+                  }}
+                >
+                  {isMarkingRead ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  Marcar como lida
+                </button>
+              ))}
+            {comic.downloadUrl && (
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:gap-2">
+                <button
+                  type="button"
+                  onClick={handleReadOnline}
+                  disabled={isLoading}
+                  aria-busy={isLoading}
+                  aria-label={isLoading ? "Carregando página de leitura" : undefined}
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-white transition-all duration-300 hover:brightness-110 disabled:cursor-wait disabled:opacity-80"
+                  style={{ backgroundColor: theme.accentColor }}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <BookOpen className="h-4 w-4" />
+                      <span className="sm:hidden">Ler</span>
+                      <span className="hidden sm:inline">Ler Online</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  aria-label={`Baixar HQ ${comic.title}`}
+                  href={`${apiUrl}/api/proxy/download?url=${encodeURIComponent(comic.downloadUrl)}`}
+                  download
+                  title="Download"
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs font-medium text-white/60 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="sm:hidden">Baixar</span>
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>
     </article>
   )
+}
+
+function formatReadDate(value?: string) {
+  if (!value) return ""
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ""
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed)
 }
 
 function EmptyState({

@@ -59,6 +59,7 @@ export const characters = new Elysia({ prefix: "/characters" })
     const readComics = await db!
       .select({
         comicId: userReadComics.comicId,
+        readAt: userReadComics.readAt,
       })
       .from(userReadComics)
       .innerJoin(comicsToCharacters, eq(userReadComics.comicId, comicsToCharacters.comicId))
@@ -69,7 +70,7 @@ export const characters = new Elysia({ prefix: "/characters" })
         ),
       )
 
-    return { data: readComics.map((row) => row.comicId) }
+    return { data: readComics.map((row) => ({ comicId: row.comicId, readAt: row.readAt })) }
   })
   .get("/:slug/comics", async ({ params: { slug }, set }) => {
     if (!isDbAvailable) {

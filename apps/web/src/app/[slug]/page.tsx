@@ -18,6 +18,11 @@ interface CharacterComicsResponse {
   message?: string
 }
 
+interface ReadComicEntry {
+  comicId: string
+  readAt: string
+}
+
 export const revalidate = 180
 
 interface CharacterPageProps {
@@ -43,7 +48,7 @@ const getCharacterComics = cache(async (slug: string): Promise<CharacterComicsRe
 async function getReadComicsByCharacter(
   slug: string,
   authCookieValue: string | undefined,
-): Promise<string[]> {
+): Promise<ReadComicEntry[]> {
   if (!authCookieValue) return []
 
   try {
@@ -56,7 +61,9 @@ async function getReadComicsByCharacter(
 
     if (!response.ok) return []
 
-    const payload = (await response.json()) as { data?: string[] | null }
+    const payload = (await response.json()) as {
+      data?: ReadComicEntry[] | null
+    }
     return payload.data ?? []
   } catch {
     return []
@@ -116,7 +123,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   const authUser = await getServerAuthUser()
   const cookieStore = await cookies()
   const authCookieValue = cookieStore.get(AUTH_COOKIE_KEY)?.value
-  const readComicIds = authUser
+  const readComics = authUser
     ? await getReadComicsByCharacter(slug, authCookieValue)
     : []
 
@@ -130,7 +137,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
         theme={characterTheme}
         hasError={!result}
         authUser={authUser}
-        readComicIds={readComicIds}
+        readComics={readComics}
       />
     )
   }
@@ -147,7 +154,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
       theme={characterTheme}
       hasError={false}
       authUser={authUser}
-      readComicIds={readComicIds}
+      readComics={readComics}
     />
   )
 }

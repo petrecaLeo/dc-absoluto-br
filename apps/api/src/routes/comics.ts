@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lte } from "drizzle-orm"
+import { and, desc, eq, isNotNull, lte, sql } from "drizzle-orm"
 import { Elysia } from "elysia"
 import { db, isDbAvailable } from "../db"
 import { comics as comicsTable, userReadComics, users } from "../db/schema"
@@ -26,6 +26,38 @@ export const comics = new Elysia({ prefix: "/comics" })
     }
 
     return { data: latestComic[0] }
+  })
+  .get("/read/count", async ({ set, request }) => {
+    set.headers["Cache-Control"] = "private, max-age=0, no-store"
+
+    if (!isDbAvailable) {
+      set.status = 503
+      return { data: { count: 0 }, message: "Banco indisponível" }
+    }
+
+    const authUser = getAuthUserFromRequest(request)
+    if (!authUser) {
+      set.status = 401
+      return { data: { count: 0 }, message: "Usuário não autenticado" }
+    }
+
+    const [dbUser] = await db!
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, authUser.email))
+      .limit(1)
+
+    if (!dbUser) {
+      set.status = 401
+      return { data: { count: 0 }, message: "Usuário não autenticado" }
+    }
+
+    const [result] = await db!
+      .select({ count: sql<number>`count(*)` })
+      .from(userReadComics)
+      .where(eq(userReadComics.userId, dbUser.id))
+
+    return { data: { count: Number(result?.count ?? 0) } }
   })
   .get("/:id", async ({ params: { id }, set }) => {
     if (!isDbAvailable) {
