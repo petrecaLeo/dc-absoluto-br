@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
+import { PROFILE_IMAGE_OPTIONS } from "@dc-absoluto/shared-types"
 import { db, isDbAvailable } from "../db"
 import { userEmailVerifications, users } from "../db/schema"
 import { sendEmailVerificationEmail } from "../services/email"
@@ -8,6 +9,7 @@ import { getAuthUserFromRequest } from "../utils/auth"
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
 const PASSWORD_PATTERN = "^(?=.*\\d).{6,}$"
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
+const PROFILE_IMAGE_IDS = new Set(PROFILE_IMAGE_OPTIONS.map((option) => option.id))
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
 const normalizeName = (name: string) => name.trim().replace(/\\s+/g, " ")
@@ -33,6 +35,7 @@ export const auth = new Elysia({ prefix: "/auth" })
             id: crypto.randomUUID(),
             name: normalizedName,
             email: normalizedEmail,
+            profileImage: null,
           },
         }
       }
@@ -123,6 +126,7 @@ export const auth = new Elysia({ prefix: "/auth" })
             id: crypto.randomUUID(),
             name: normalizedEmail.split("@")[0] || "Visitante",
             email: normalizedEmail,
+            profileImage: null,
           },
         }
       }
@@ -181,6 +185,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           id: user.id,
           name: user.name,
           email: user.email,
+          profileImage: user.profileImage ?? null,
         },
       }
     },
@@ -252,6 +257,73 @@ export const auth = new Elysia({ prefix: "/auth" })
       body: t.Object({
         currentPassword: t.String({ minLength: 6, maxLength: 128 }),
         newPassword: t.String({ minLength: 6, maxLength: 128, pattern: PASSWORD_PATTERN }),
+      }),
+    },
+  )
+  .post(
+    "/profile-image",
+    async ({ body, request, set }) => {
+      const authUser = getAuthUserFromRequest(request)
+      if (!authUser) {
+        set.status = 401
+        return { success: false, message: "Usuário não autenticado." }
+      }
+
+      const profileImage = body.profileImage.trim()
+      if (!PROFILE_IMAGE_IDS.has(profileImage)) {
+        set.status = 400
+        return { success: false, message: "Foto de perfil inválida." }
+      }
+
+      if (!isDbAvailable) {
+        return {
+          success: true,
+          message: "Foto atualizada (ambiente sem banco).",
+          user: {
+            id: authUser.id,
+            name: authUser.name,
+            email: authUser.email,
+            profileImage,
+          },
+        }
+      }
+
+      try {
+        const [user] = await db!
+          .select()
+          .from(users)
+          .where(eq(users.email, authUser.email))
+          .limit(1)
+
+        if (!user) {
+          set.status = 401
+          return { success: false, message: "Usuário não autenticado." }
+        }
+
+        await db!
+          .update(users)
+          .set({ profileImage, updatedAt: new Date() })
+          .where(eq(users.id, user.id))
+
+        return {
+          success: true,
+          message: "Foto atualizada com sucesso.",
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            profileImage,
+          },
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar foto de perfil:", error)
+        set.status = 500
+        return { success: false, message: "Erro ao atualizar foto de perfil." }
+      }
+    },
+    {
+      body: t.Object({
+        profileImage: t.String({ minLength: 1, maxLength: 100 }),
       }),
     },
   )

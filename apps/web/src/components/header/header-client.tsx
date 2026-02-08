@@ -3,6 +3,8 @@
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
+import { UserAvatar } from "@/components/user-avatar"
+
 import type { AuthUser } from "./auth.types"
 import { clearStoredUser, getStoredUser, storeUser, subscribeAuthChanges } from "./auth.storage"
 import { useHeader } from "./header.hook"
@@ -139,12 +141,18 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
                     <>
                       <button
                         type="button"
-                        onClick={() => setIsProfileOpen((prev) => !prev)}
+                        onClick={() => setIsProfileOpen(true)}
                         aria-expanded={isProfileOpen}
                         aria-haspopup="menu"
-                        className="group relative cursor-pointer text-sm uppercase font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
+                        className="group relative flex cursor-pointer items-center gap-2 text-sm uppercase font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
                       >
-                        {firstName}
+                        <UserAvatar
+                          name={authUser.name}
+                          profileImage={authUser.profileImage}
+                          size="sm"
+                          className="border-white/20"
+                        />
+                        <span>{firstName}</span>
                         <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-dc-blue shadow-[0_0_8px_2px_rgba(4,118,242,0.6)] transition-all duration-150 group-hover:w-full" />
                       </button>
                       <div
@@ -263,9 +271,15 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
                       onClick={() => setIsProfileOpen((prev) => !prev)}
                       aria-expanded={isProfileOpen}
                       aria-haspopup="menu"
-                      className="group relative cursor-pointer text-sm uppercase font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
+                      className="group relative flex cursor-pointer items-center gap-2 text-sm uppercase font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
                     >
-                      {firstName}
+                      <UserAvatar
+                        name={authUser.name}
+                        profileImage={authUser.profileImage}
+                        size="sm"
+                        className="border-white/20"
+                      />
+                      <span>{firstName}</span>
                       <span className="absolute -bottom-1 right-0 h-0.5 w-0 bg-dc-blue shadow-[0_0_8px_2px_rgba(4,118,242,0.6)] transition-all duration-150 group-hover:w-full" />
                     </button>
                     <div

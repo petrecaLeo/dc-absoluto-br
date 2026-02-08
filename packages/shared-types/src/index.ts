@@ -50,3 +50,6 @@ export interface PaginatedResponse<T> {
   pageSize: number
   totalPages: number
 }
+
+export { PROFILE_IMAGE_OPTIONS } from "./profile-images"
+export type { ProfileImageId, ProfileImageOption } from "./profile-images"

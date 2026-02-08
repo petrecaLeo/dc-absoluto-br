@@ -64,6 +64,13 @@
       "when": 1770344786301,
       "tag": "0008_add_user_email_verifications",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770420000000,
+      "tag": "0009_add_user_profile_image",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
+  profileImage?: string | null
 }
 
 function parseCookieHeader(header: string): Record<string, string> {
@@ -34,10 +35,16 @@ export function getAuthUserFromRequest(request: Request): AuthUser | null {
     if (typeof parsed.name !== "string") return null
     if (typeof parsed.email !== "string") return null
 
+    const profileImage =
+      typeof parsed.profileImage === "string" && parsed.profileImage.trim().length > 0
+        ? parsed.profileImage.trim()
+        : null
+
     return {
       id: parsed.id,
       name: parsed.name,
       email: parsed.email,
+      profileImage,
     }
   } catch {
     return null

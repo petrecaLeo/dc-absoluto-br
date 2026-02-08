@@ -164,7 +164,7 @@ function formatReadDate(value?: string) {
 function ComicCard({ comic }: { comic: ComicWithReadAt }) {
   const readDate = formatReadDate(comic.readAt)
   return (
-    <article className="group relative flex w-[160px] flex-col overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03] transition-all duration-300 hover:border-white/10 hover:bg-white/[0.06] sm:w-[180px] lg:w-[200px]">
+    <article className="group relative flex w-[calc(50%-0.5rem)] flex-col overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03] transition-all duration-300 hover:border-white/10 hover:bg-white/[0.06] sm:w-[180px] lg:w-[200px]">
       <div className="relative aspect-[623/959] w-full overflow-hidden bg-dc-dark">
         {comic.coverUrl ? (
           <Image
