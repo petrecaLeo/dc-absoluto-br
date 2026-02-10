@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 
+import { Analytics } from "@vercel/analytics/react"
+
 import { QueryProvider } from "@/lib/query-client"
 import {
   DEFAULT_OG_IMAGE,
@@ -59,6 +61,7 @@ export default function RootLayout({
           Pular para conteúdo principal
         </a>
         <QueryProvider>{children}</QueryProvider>
+        <Analytics />
       </body>
     </html>
   )
