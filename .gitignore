@@ -35,6 +35,9 @@ coverage/
 # Docker
 .docker/
 
+# Claude Code
+.claude/
+
 # Misc
 *.pem
 CLAUDE.md
