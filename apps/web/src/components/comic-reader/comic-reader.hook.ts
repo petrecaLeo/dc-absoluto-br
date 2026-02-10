@@ -77,7 +77,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   const wheelAccumulatorRef = useRef(0)
   const wheelResetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastWheelTriggerRef = useRef(0)
-  const CONTROLS_HIDE_DELAY = 2000
+  const CONTROLS_HIDE_DELAY = 1000
   const [resumePage, setResumePage] = useState<number | null>(null)
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false)
   const resumeHandledRef = useRef(false)
