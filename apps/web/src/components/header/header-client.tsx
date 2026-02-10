@@ -21,6 +21,8 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [authUser, setAuthUser] = useState<AuthUser | null>(initialAuthUser ?? null)
   const desktopProfileRef = useRef<HTMLLIElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
   const mobileLinkTabIndex = isMenuOpen ? 0 : -1
 
   const handleMobileNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -66,6 +68,25 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
       document.removeEventListener("touchstart", handleOutsideClick)
     }
   }, [isProfileOpen])
+
+  useEffect(() => {
+    if (!isMenuOpen) return
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (mobileMenuRef.current?.contains(target)) return
+      if (mobileMenuButtonRef.current?.contains(target)) return
+      setIsMenuOpen(false)
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick)
+    document.addEventListener("touchstart", handleOutsideClick)
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick)
+      document.removeEventListener("touchstart", handleOutsideClick)
+    }
+  }, [isMenuOpen])
 
   const handleAuthSuccess = (user: AuthUser) => {
     storeUser(user)
@@ -204,6 +225,7 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
               </ul>
 
               <button
+                ref={mobileMenuButtonRef}
                 type="button"
                 aria-label="Abrir menu"
                 aria-expanded={isMenuOpen}
@@ -237,6 +259,7 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
           </nav>
 
           <div
+            ref={mobileMenuRef}
             id="mobile-menu"
             aria-hidden={!isMenuOpen}
             className={`absolute right-4 top-full mt-3 w-56 origin-top-right transform-gpu rounded-xl bg-dc-black/95 p-4 text-right shadow-xl backdrop-blur-lg transition-all duration-300 ease-out lg:hidden ${
