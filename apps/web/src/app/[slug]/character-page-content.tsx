@@ -670,7 +670,7 @@ function ComicCard({
                   {isMarkingRead ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Check className="h-4 w-4" />
+                    <Check className="hidden h-4 w-4 sm:block" />
                   )}
                   Marcar como lida
                 </button>

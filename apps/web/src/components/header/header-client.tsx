@@ -21,13 +21,11 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [authUser, setAuthUser] = useState<AuthUser | null>(initialAuthUser ?? null)
   const desktopProfileRef = useRef<HTMLLIElement>(null)
-  const mobileProfileRef = useRef<HTMLDivElement>(null)
   const mobileLinkTabIndex = isMenuOpen ? 0 : -1
 
   const handleMobileNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     handleNavClick(e, href)
     setIsMenuOpen(false)
-    setIsProfileOpen(false)
   }
 
   useEffect(() => {
@@ -58,7 +56,6 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
       const target = event.target as Node | null
       if (!target) return
       if (desktopProfileRef.current?.contains(target)) return
-      if (mobileProfileRef.current?.contains(target)) return
       setIsProfileOpen(false)
     }
 
@@ -89,7 +86,6 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
 
   const firstName = authUser?.name.trim().split(/\s+/)[0] || "Heroi"
   const profileTabIndex = isProfileOpen ? 0 : -1
-  const mobileProfileTabIndex = isMenuOpen && isProfileOpen ? 0 : -1
 
   return (
     <header
@@ -265,58 +261,43 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
               ))}
               <li className="border-t border-white/10 pt-3">
                 {authUser ? (
-                  <div className="flex flex-col items-end gap-3" ref={mobileProfileRef}>
-                    <button
-                      type="button"
-                      onClick={() => setIsProfileOpen((prev) => !prev)}
-                      aria-expanded={isProfileOpen}
-                      aria-haspopup="menu"
-                      className="group relative flex cursor-pointer items-center gap-2 text-sm uppercase font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
-                    >
+                  <div className="flex flex-col items-end gap-4">
+                    <div className="flex items-center gap-2">
                       <UserAvatar
                         name={authUser.name}
                         profileImage={authUser.profileImage}
                         size="sm"
                         className="border-white/20"
                       />
-                      <span>{firstName}</span>
-                      <span className="absolute -bottom-1 right-0 h-0.5 w-0 bg-dc-blue shadow-[0_0_8px_2px_rgba(4,118,242,0.6)] transition-all duration-150 group-hover:w-full" />
-                    </button>
-                    <div
-                      className={`w-max min-w-[8.5rem] origin-top-right transform-gpu rounded-xl bg-dc-black/95 p-3 text-right shadow-xl backdrop-blur-lg transition-all duration-200 ease-out ${
-                        isProfileOpen
-                          ? "translate-y-0 opacity-100"
-                          : "pointer-events-none -translate-y-2 opacity-0"
-                      }`}
-                    >
-                      <div className="flex flex-col gap-2">
-                        <a
-                          href="/perfil"
-                          onClick={handleProfileNavigate}
-                          tabIndex={mobileProfileTabIndex}
-                          className="group relative text-sm font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-dc-blue"
-                        >
-                          PERFIL
-                          <span className="absolute -bottom-1 right-0 h-0.5 w-0 bg-dc-blue shadow-[0_0_8px_2px_rgba(4,118,242,0.6)] transition-all duration-150 group-hover:w-full" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={handleLogout}
-                          tabIndex={mobileProfileTabIndex}
-                          className="group flex cursor-pointer items-center justify-end gap-2 text-sm font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 24 24"
-                            className="h-4 w-4"
-                            fill="currentColor"
-                          >
-                            <path d="M16 17v-1h-4v-2h4v-1l3 2-3 2zM4 4h8a2 2 0 0 1 2 2v3h-2V6H4v12h8v-3h2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
-                          </svg>
-                          SAIR
-                        </button>
-                      </div>
+                      <span className="text-sm uppercase font-semibold tracking-wider text-white/80">
+                        {firstName}
+                      </span>
                     </div>
+                    <a
+                      href="/perfil"
+                      onClick={() => setIsMenuOpen(false)}
+                      tabIndex={mobileLinkTabIndex}
+                      className="group relative text-sm font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-dc-blue"
+                    >
+                      PERFIL
+                      <span className="absolute -bottom-1 right-0 h-0.5 w-0 bg-dc-blue shadow-[0_0_8px_2px_rgba(4,118,242,0.6)] transition-all duration-150 group-hover:w-full" />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      tabIndex={mobileLinkTabIndex}
+                      className="group flex cursor-pointer items-center justify-end gap-2 text-sm font-semibold tracking-wider text-white/80 transition-colors duration-150 hover:text-white"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4"
+                        fill="currentColor"
+                      >
+                        <path d="M16 17v-1h-4v-2h4v-1l3 2-3 2zM4 4h8a2 2 0 0 1 2 2v3h-2V6H4v12h8v-3h2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+                      </svg>
+                      SAIR
+                    </button>
                   </div>
                 ) : (
                   <button
