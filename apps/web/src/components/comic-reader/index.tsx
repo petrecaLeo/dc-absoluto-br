@@ -21,9 +21,10 @@ interface ComicReaderProps {
   comicTitle: string
   backUrl: string
   comicId: string
+  disableReadTracking?: boolean
 }
 
-export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: ComicReaderProps) {
+export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId, disableReadTracking }: ComicReaderProps) {
   const {
     pages,
     currentPage,
@@ -64,7 +65,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
     handleTouchEnd,
     handleMouseDown,
     isDragging,
-  } = useComicReader({ downloadUrl, comicTitle, comicId })
+  } = useComicReader({ downloadUrl, comicTitle, comicId, disableReadTracking })
 
   const controlsHidden = isFullscreenActive && !showControls
   const fullscreenButtonTitle = isFullscreenActive ? "Sair da tela cheia (F)" : "Tela cheia (F)"

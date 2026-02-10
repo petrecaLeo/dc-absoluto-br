@@ -9,6 +9,7 @@ export default function DcAllInReaderPage() {
       downloadUrl={DOWNLOAD_URL}
       comicTitle="DC All In"
       backUrl="/#where-to-start"
+      disableReadTracking
     />
   )
 }

@@ -18,6 +18,7 @@ interface UseComicReaderProps {
   downloadUrl: string
   comicTitle: string
   comicId: string
+  disableReadTracking?: boolean
 }
 
 type LoadingState = "idle" | "loading" | "extracting" | "ready" | "error"
@@ -44,7 +45,7 @@ function getAuthUserFromCookie() {
   return decodeAuthCookie(value)
 }
 
-export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicReaderProps) {
+export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTracking }: UseComicReaderProps) {
   const [pages, setPages] = useState<ComicPage[]>([])
   const [currentPage, setCurrentPage] = useState(0)
   const [loadingState, setLoadingState] = useState<LoadingState>("idle")
@@ -544,7 +545,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   }, [authUserId, comicId, currentPage, isResumeModalOpen, isProgressForUser, loadingState, totalPages])
 
   useEffect(() => {
-    if (!authUserId || !comicId || loadingState !== "ready" || totalPages === 0) {
+    if (disableReadTracking || !authUserId || !comicId || loadingState !== "ready" || totalPages === 0) {
       return
     }
 
