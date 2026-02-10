@@ -485,6 +485,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
                       height={group.pages.length === 1 ? 1200 : 900}
                       className={`pointer-events-none w-auto select-none object-contain ${group.pages.length > 1 ? "max-w-[50vw]" : ""} ${imageMaxHeightClass}`}
                       priority={group.startIndex <= 3}
+                      fetchPriority={group.startIndex === 0 && i === 0 ? "high" : undefined}
                       unoptimized
                       draggable={false}
                     />
@@ -504,6 +505,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
                     height={1200}
                     className={`pointer-events-none w-auto select-none object-contain ${imageMaxHeightClass}`}
                     priority={index <= 3}
+                    fetchPriority={index === 0 ? "high" : undefined}
                     unoptimized
                     draggable={false}
                   />
@@ -524,7 +526,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
             type="button"
             onClick={handlePrevClick}
             disabled={isFirstPage}
-            className="cursor-pointer rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-medium text-white/80 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/5"
+            className="cursor-pointer rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-medium text-white transition-all duration-300 hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/5"
           >
             Anterior
           </button>
@@ -550,12 +552,12 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
             type="button"
             onClick={handleNextClick}
             disabled={isLastPage}
-            className="cursor-pointer rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-medium text-white/80 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/5"
+            className="cursor-pointer rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-medium text-white transition-all duration-300 hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/5"
           >
             Próxima
           </button>
         </div>
-        <p className="mt-2 hidden text-center text-xs text-white/30 lg:block">
+        <p className="mt-2 hidden text-center text-xs text-white/90 lg:block">
           ← → navegar • F tela cheia • D página dupla
         </p>
       </footer>

@@ -188,7 +188,7 @@ function HeroSection({
               {character.name}
             </h1>
             {character.alias && (
-              <p className="mt-2 text-lg italic text-white/40">{character.alias}</p>
+              <p className="mt-2 text-lg italic text-white/60">{character.alias}</p>
             )}
             {characterSynopsisBySlug[character.slug] && (
               <p className="mt-4 max-w-2xl text-sm text-white/70 md:text-base">
@@ -605,6 +605,7 @@ function ComicCard({
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 250px"
             quality={70}
+            priority={index < 4}
             className="object-cover group-hover:brightness-105"
           />
         ) : (
@@ -618,12 +619,12 @@ function ComicCard({
       </div>
 
       <div className="flex flex-1 flex-col p-3">
-        <h3 className="text-sm font-bold leading-tight text-white line-clamp-2">{comic.title}</h3>
+        <h2 className="text-sm font-bold leading-tight text-white line-clamp-2">{comic.title}</h2>
 
         <div className="mt-2 space-y-0.5">
           {comic.releaseDate && (
-            <p className="text-xs text-white/40 line-clamp-1" suppressHydrationWarning>
-              <span className="text-white/60">Publicação (EUA):</span>{" "}
+            <p className="text-xs text-white/60 line-clamp-1" suppressHydrationWarning>
+              <span className="text-white/75">Publicação (EUA):</span>{" "}
               {new Date(comic.releaseDate).toLocaleDateString("pt-BR", {
                 day: "2-digit",
                 month: "short",
@@ -633,13 +634,13 @@ function ComicCard({
             </p>
           )}
           {comic.writer && (
-            <p className="text-xs text-white/40 line-clamp-1">
-              <span className="text-white/60">Roteiro:</span> {comic.writer}
+            <p className="text-xs text-white/60 line-clamp-1">
+              <span className="text-white/75">Roteiro:</span> {comic.writer}
             </p>
           )}
           {comic.artists && (
-            <p className="text-xs text-white/40 line-clamp-1">
-              <span className="text-white/60">Arte:</span> {comic.artists}
+            <p className="text-xs text-white/60 line-clamp-1">
+              <span className="text-white/75">Arte:</span> {comic.artists}
             </p>
           )}
         </div>
@@ -664,7 +665,7 @@ function ComicCard({
                   style={{
                     borderColor: `${theme.accentColor}55`,
                     backgroundColor: `${theme.accentColor}18`,
-                    color: theme.accentColor,
+                    color: `color-mix(in srgb, ${theme.accentColor} 75%, black)`,
                   }}
                 >
                   {isMarkingRead ? (
@@ -684,7 +685,9 @@ function ComicCard({
                   aria-busy={isLoading}
                   aria-label={isLoading ? "Carregando página de leitura" : undefined}
                   className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-white transition-all duration-300 hover:brightness-110 disabled:cursor-wait disabled:opacity-80"
-                  style={{ backgroundColor: theme.accentColor }}
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${theme.accentColor} 75%, black)`,
+                  }}
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -701,7 +704,7 @@ function ComicCard({
                   href={`${apiUrl}/api/proxy/download?url=${encodeURIComponent(comic.downloadUrl)}`}
                   download
                   title="Download"
-                  className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs font-medium text-white/60 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs font-medium text-white/70 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
                 >
                   <Download className="h-4 w-4" />
                   <span className="sm:hidden">Baixar</span>

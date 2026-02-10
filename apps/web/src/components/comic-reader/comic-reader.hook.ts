@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
+import { getCachedComic, setCachedComic } from "@/services/comic-cache"
 import { PUBLIC_API_URL } from "@/lib/env/public"
 import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
 
@@ -682,6 +683,29 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
         setProgress(0)
         setError(null)
 
+        if (!forceRetry && comicId) {
+          const cached = await getCachedComic(comicId)
+          if (cached && cached.pages.length > 0) {
+            setProgress(50)
+            setLoadingState("extracting")
+
+            const restoredPages: ComicPage[] = cached.pages.map((p) => ({
+              name: p.name,
+              url: URL.createObjectURL(p.blob),
+              width: p.width,
+              height: p.height,
+              isLandscape: p.isLandscape,
+            }))
+
+            setPages(restoredPages)
+            setLoadingState("ready")
+            setProgress(100)
+            hasExtractedRef.current = true
+            isExtractingRef.current = false
+            return
+          }
+        }
+
         const proxyUrl = `${PUBLIC_API_URL}/api/proxy/download?url=${encodeURIComponent(downloadUrl)}`
         const response = await fetch(proxyUrl)
 
@@ -741,6 +765,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
           .sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true }))
 
         const extractedPages: ComicPage[] = []
+        const blobsForCache: { name: string; blob: Blob; width: number; height: number; isLandscape: boolean }[] = []
 
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i]
@@ -754,12 +779,21 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
             img.src = url
           })
 
-          extractedPages.push({
+          const page = {
             name: file.file.name,
             url,
             width: dimensions.width,
             height: dimensions.height,
             isLandscape: dimensions.width > dimensions.height,
+          }
+
+          extractedPages.push(page)
+          blobsForCache.push({
+            name: page.name,
+            blob: extractedFile,
+            width: page.width,
+            height: page.height,
+            isLandscape: page.isLandscape,
           })
           setProgress(50 + Math.round(((i + 1) / imageFiles.length) * 50))
         }
@@ -768,6 +802,10 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
         setLoadingState("ready")
         setProgress(100)
         hasExtractedRef.current = true
+
+        if (comicId) {
+          setCachedComic(comicId, blobsForCache).catch(() => {})
+        }
       } catch (err) {
         console.error("Erro ao extrair HQ:", err)
         setError(err instanceof Error ? err.message : "Erro desconhecido ao extrair HQ")
@@ -776,7 +814,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
         isExtractingRef.current = false
       }
     },
-    [downloadUrl],
+    [comicId, downloadUrl],
   )
 
   useEffect(() => {

@@ -55,8 +55,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="font-sans" suppressHydrationWarning>
-        <a href="#characters" className="skip-link">
-          Pular para personagens
+        <a href="#main-content" className="skip-link">
+          Pular para conteúdo principal
         </a>
         <QueryProvider>{children}</QueryProvider>
       </body>
