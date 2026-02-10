@@ -52,7 +52,9 @@
       "Bash(find:*)",
       "Bash(npx drizzle-kit push:*)",
       "Bash(bun:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

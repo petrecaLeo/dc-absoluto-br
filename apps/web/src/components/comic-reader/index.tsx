@@ -25,6 +25,7 @@ interface ComicReaderProps {
 
 export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: ComicReaderProps) {
   const {
+    pages,
     currentPage,
     currentPageData,
     nextPageData,
@@ -43,6 +44,8 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
     panPosition,
     isZoomed,
     isDoublePageMode,
+    showSingleInDoubleMode,
+    doublePageGroups,
     goToNextPage,
     goToPrevPage,
     goToPage,
@@ -51,6 +54,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
     retryExtract,
     zoomIn,
     zoomOut,
+    maxZoomLevel,
     resumePage,
     isResumeModalOpen,
     handleResumeReading,
@@ -102,6 +106,169 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
 
   const mainPaddingTop = isPseudoFullscreen && !controlsHidden ? headerHeight : 0
   const mainPaddingBottom = isPseudoFullscreen && !controlsHidden ? footerHeight : 0
+
+  const mainRef = useRef<HTMLElement>(null)
+  const isProgrammaticScrollRef = useRef(false)
+  const programmaticScrollTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const isScrollDrivenRef = useRef(false)
+  const currentPageRef = useRef(currentPage)
+  currentPageRef.current = currentPage
+  const prevFullscreenRef = useRef(isFullscreenActive)
+
+  const scrollToPage = useCallback((pageIndex: number, instant = false) => {
+    const pageElement = document.querySelector(`[data-page-index="${pageIndex}"]`)
+
+    if (pageElement && mainRef.current) {
+      isProgrammaticScrollRef.current = true
+
+      if (programmaticScrollTimerRef.current) {
+        clearTimeout(programmaticScrollTimerRef.current)
+      }
+
+      const mainRect = mainRef.current.getBoundingClientRect()
+      const pageRect = pageElement.getBoundingClientRect()
+      const scrollTop = pageRect.top - mainRect.top + mainRef.current.scrollTop
+
+      if (instant) {
+        mainRef.current.scrollTop = scrollTop
+        isProgrammaticScrollRef.current = false
+      } else {
+        mainRef.current.scrollTo({
+          top: scrollTop,
+          behavior: "smooth",
+        })
+
+        programmaticScrollTimerRef.current = setTimeout(() => {
+          isProgrammaticScrollRef.current = false
+        }, 500)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (prevFullscreenRef.current !== isFullscreenActive) {
+      prevFullscreenRef.current = isFullscreenActive
+      isProgrammaticScrollRef.current = true
+
+      if (programmaticScrollTimerRef.current) {
+        clearTimeout(programmaticScrollTimerRef.current)
+      }
+
+      setTimeout(() => {
+        scrollToPage(currentPageRef.current, true)
+        programmaticScrollTimerRef.current = setTimeout(() => {
+          isProgrammaticScrollRef.current = false
+        }, 200)
+      }, 50)
+    }
+  }, [isFullscreenActive, scrollToPage])
+
+  const prevDoubleModeRef = useRef(isDoublePageMode)
+
+  useEffect(() => {
+    if (prevDoubleModeRef.current !== isDoublePageMode) {
+      prevDoubleModeRef.current = isDoublePageMode
+      isProgrammaticScrollRef.current = true
+
+      if (programmaticScrollTimerRef.current) {
+        clearTimeout(programmaticScrollTimerRef.current)
+      }
+
+      scrollToPage(currentPageRef.current, true)
+      programmaticScrollTimerRef.current = setTimeout(() => {
+        isProgrammaticScrollRef.current = false
+      }, 300)
+    }
+  }, [isDoublePageMode, scrollToPage])
+
+  const prevZoomRef = useRef(zoomLevel)
+
+  useEffect(() => {
+    if (prevZoomRef.current !== zoomLevel) {
+      prevZoomRef.current = zoomLevel
+      isProgrammaticScrollRef.current = true
+
+      requestAnimationFrame(() => {
+        scrollToPage(currentPageRef.current, true)
+        programmaticScrollTimerRef.current = setTimeout(() => {
+          isProgrammaticScrollRef.current = false
+        }, 200)
+      })
+      return
+    }
+
+    if (isScrollDrivenRef.current) {
+      isScrollDrivenRef.current = false
+      return
+    }
+    scrollToPage(currentPage)
+  }, [currentPage, zoomLevel, scrollToPage])
+
+  const handlePrevClick = goToPrevPage
+  const handleNextClick = goToNextPage
+
+  const handlePageSliderChange = useCallback(
+    (page: number) => {
+      goToPage(page)
+    },
+    [goToPage],
+  )
+
+  useEffect(() => {
+    const mainElement = mainRef.current
+    if (!mainElement || pages.length === 0) return
+
+    let rafId: number | null = null
+
+    const handleScroll = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+
+      rafId = requestAnimationFrame(() => {
+        if (isProgrammaticScrollRef.current) return
+
+        const pageElements = Array.from(mainElement.querySelectorAll("[data-page-index]"))
+        const mainRect = mainElement.getBoundingClientRect()
+        const viewportMiddle = mainRect.top + mainRect.height / 2
+
+        let bestPage = 0
+        let bestDistance = Number.POSITIVE_INFINITY
+
+        for (const element of pageElements) {
+          const rect = element.getBoundingClientRect()
+          const isVisible = rect.bottom > mainRect.top && rect.top < mainRect.bottom
+
+          if (isVisible) {
+            const pageMiddle = rect.top + rect.height / 2
+            const distance = Math.abs(pageMiddle - viewportMiddle)
+            if (distance < bestDistance) {
+              bestDistance = distance
+              const pageIndex = Number(element.getAttribute("data-page-index"))
+              if (!Number.isNaN(pageIndex)) {
+                bestPage = pageIndex
+              }
+            }
+          }
+        }
+
+        if (bestPage !== currentPageRef.current) {
+          isScrollDrivenRef.current = true
+          goToPage(bestPage)
+        }
+      })
+    }
+
+    mainElement.addEventListener("scroll", handleScroll, { passive: true })
+
+    return () => {
+      mainElement.removeEventListener("scroll", handleScroll)
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+    }
+  }, [pages.length, goToPage])
+
 
   if (loadingState === "idle" || loadingState === "loading" || loadingState === "extracting") {
     return (
@@ -188,7 +355,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
   return (
     <div
       ref={containerRef}
-      className={`flex min-h-svh flex-col bg-dc-black ${
+      className={`flex h-svh flex-col overflow-hidden bg-dc-black ${
         isPseudoFullscreen
           ? "fixed inset-0 z-[9999] h-[100dvh] w-[100vw] overscroll-none"
           : ""
@@ -205,8 +372,9 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
       />
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 flex flex-wrap items-center gap-2 border-b border-white/5 bg-dc-black/80 px-4 py-3 backdrop-blur-xl transition-all duration-300 md:flex-nowrap md:justify-between ${
-          isPseudoFullscreen ? "pt-[calc(env(safe-area-inset-top)+0.75rem)]" : ""
+        className={`z-50 flex shrink-0 flex-wrap items-center gap-2 border-b border-white/5 bg-dc-black/80 px-4 py-3 backdrop-blur-xl transition-all duration-300 md:flex-nowrap md:justify-between ${
+          isFullscreenActive ? "absolute top-0 left-0 right-0" : ""
+        } ${isPseudoFullscreen ? "pt-[calc(env(safe-area-inset-top)+0.75rem)]" : ""
         } ${controlsHidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <Link
@@ -249,7 +417,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
               <button
                 type="button"
                 onClick={zoomIn}
-                disabled={zoomLevel >= 4}
+                disabled={zoomLevel >= maxZoomLevel}
                 className="cursor-pointer rounded-r-full p-1.5 text-white/60 transition-all duration-300 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 title="Aumentar zoom (+)"
                 aria-label="Aumentar zoom"
@@ -286,6 +454,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
       </header>
 
       <main
+        ref={mainRef}
         id="main-content"
         tabIndex={-1}
         style={
@@ -293,84 +462,67 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
             ? { paddingTop: mainPaddingTop, paddingBottom: mainPaddingBottom }
             : undefined
         }
-        className={`flex flex-1 min-h-0 items-center justify-center overflow-hidden box-border ${
-          isFullscreenActive ? "" : "pt-24 pb-24 md:pt-14"
-        }`}
+        className="relative z-0 flex flex-1 min-h-0 items-start justify-center box-border overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-400 [&::-webkit-scrollbar-thumb:hover]:bg-blue-300 [scrollbar-color:#60a5fa_#334155] [scrollbar-width:thin]"
       >
-        {currentPageData && (
-          <div
-            ref={imageContainerRef}
-            className={`relative flex h-full w-full items-center justify-center ${isZoomed ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""}`}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onMouseDown={handleMouseDown}
-          >
-            {!isZoomed && (
-              <>
-                <button
-                  type="button"
-                  onClick={goToPrevPage}
-                  disabled={isFirstPage}
-                  aria-hidden="true"
-                  tabIndex={-1}
-                  className="absolute left-0 top-0 z-10 h-full w-1/3 cursor-pointer opacity-0 disabled:cursor-default"
-                  aria-label="Página anterior"
-                />
-                <button
-                  type="button"
-                  onClick={goToNextPage}
-                  disabled={isLastPage}
-                  aria-hidden="true"
-                  tabIndex={-1}
-                  className="absolute right-0 top-0 z-10 h-full w-1/3 cursor-pointer opacity-0 disabled:cursor-default"
-                  aria-label="Próxima página"
-                />
-              </>
-            )}
-            <div
-              className={`flex items-center justify-center ${isDoublePageMode ? "gap-1" : ""}`}
-              style={{
-                transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
-              }}
-            >
-              <Image
-                src={currentPageData.url}
-                alt={`Página ${currentPage + 1}`}
-                width={isDoublePageMode ? 600 : 800}
-                height={isDoublePageMode ? 900 : 1200}
-                className={`pointer-events-none w-auto select-none object-contain transition-transform duration-100 ${imageMaxHeightClass} ${isDoublePageMode ? "max-w-[50vw]" : ""}`}
-                priority
-                unoptimized
-                draggable={false}
-              />
-              {isDoublePageMode && nextPageData && (
-                <Image
-                  src={nextPageData.url}
-                  alt={`Página ${currentPage + 2}`}
-                  width={600}
-                  height={900}
-                  className={`pointer-events-none max-w-[50vw] w-auto select-none object-contain transition-transform duration-100 ${imageMaxHeightClass}`}
-                  priority
-                  unoptimized
-                  draggable={false}
-                />
-              )}
-            </div>
-          </div>
-        )}
+        <div
+          ref={imageContainerRef}
+          className="flex flex-col items-center justify-start w-full gap-4"
+          style={{ zoom: zoomLevel }}
+        >
+          {isDoublePageMode
+            ? doublePageGroups.map((group) => (
+                <div
+                  key={group.startIndex}
+                  data-page-index={group.startIndex}
+                  className="flex items-center justify-center w-full gap-2"
+                >
+                  {group.pages.map((page, i) => (
+                    <Image
+                      key={page.url}
+                      src={page.url}
+                      alt={`Página ${group.startIndex + i + 1}`}
+                      width={group.pages.length === 1 ? 800 : 600}
+                      height={group.pages.length === 1 ? 1200 : 900}
+                      className={`pointer-events-none w-auto select-none object-contain ${group.pages.length > 1 ? "max-w-[50vw]" : ""} ${imageMaxHeightClass}`}
+                      priority={group.startIndex <= 3}
+                      unoptimized
+                      draggable={false}
+                    />
+                  ))}
+                </div>
+              ))
+            : pages.map((page, index) => (
+                <div
+                  key={page.url}
+                  data-page-index={index}
+                  className="flex items-center justify-center w-full"
+                >
+                  <Image
+                    src={page.url}
+                    alt={`Página ${index + 1}`}
+                    width={800}
+                    height={1200}
+                    className={`pointer-events-none w-auto select-none object-contain ${imageMaxHeightClass}`}
+                    priority={index <= 3}
+                    unoptimized
+                    draggable={false}
+                  />
+                </div>
+              ))}
+        </div>
       </main>
 
       <footer
         ref={footerRef}
-        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-dc-black/80 px-4 py-4 backdrop-blur-xl transition-all duration-300 ${
-          isPseudoFullscreen ? "pb-[calc(env(safe-area-inset-bottom)+1rem)]" : ""
+        className={`z-50 shrink-0 border-t border-white/5 bg-dc-black/80 px-4 py-4 backdrop-blur-xl transition-all duration-300 ${
+          isFullscreenActive ? "absolute bottom-0 left-0 right-0" : ""
+        } ${isPseudoFullscreen ? "pb-[calc(env(safe-area-inset-bottom)+1rem)]" : ""
         } ${controlsHidden ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <div className="mx-auto flex max-w-md items-center justify-center gap-3">
           <button
             type="button"
-            onClick={goToPrevPage}
+            onClick={handlePrevClick}
             disabled={isFirstPage}
             className="cursor-pointer rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-medium text-white/80 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/5"
           >
@@ -386,7 +538,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
             min={0}
             max={totalPages - 1}
             value={currentPage}
-            onChange={(e) => goToPage(Number(e.target.value))}
+            onChange={(e) => handlePageSliderChange(Number(e.target.value))}
             aria-valuemin={1}
             aria-valuemax={totalPages}
             aria-valuenow={currentPage + 1}
@@ -396,7 +548,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
 
           <button
             type="button"
-            onClick={goToNextPage}
+            onClick={handleNextClick}
             disabled={isLastPage}
             className="cursor-pointer rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-medium text-white/80 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/5"
           >
@@ -404,7 +556,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId }: Comic
           </button>
         </div>
         <p className="mt-2 hidden text-center text-xs text-white/30 lg:block">
-          ← → navegar • F tela cheia • Z zoom • D página dupla
+          ← → navegar • F tela cheia • D página dupla
         </p>
       </footer>
     </div>

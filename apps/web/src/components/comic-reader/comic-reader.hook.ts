@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
 import { PUBLIC_API_URL } from "@/lib/env/public"
 import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
@@ -8,6 +8,9 @@ import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cook
 interface ComicPage {
   name: string
   url: string
+  width: number
+  height: number
+  isLandscape: boolean
 }
 
 interface UseComicReaderProps {
@@ -19,7 +22,6 @@ interface UseComicReaderProps {
 type LoadingState = "idle" | "loading" | "extracting" | "ready" | "error"
 
 const MIN_ZOOM = 1
-const MAX_ZOOM = 4
 const ZOOM_STEP = 0.25
 const PRELOAD_AHEAD = 3
 const PRELOAD_BEHIND = 2
@@ -81,15 +83,44 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   const resumeHandledRef = useRef(false)
   const hasMarkedReadRef = useRef(false)
 
+  const [maxZoomLevel, setMaxZoomLevel] = useState(4)
+
   const totalPages = pages.length
   const isFirstPage = currentPage === 0
+
+  const doublePageGroups = useMemo(() => {
+    const groups: { startIndex: number; pages: ComicPage[] }[] = []
+    let i = 0
+    while (i < pages.length) {
+      const current = pages[i]
+      const next = pages[i + 1]
+      if (!current) break
+      if (current.isLandscape) {
+        groups.push({ startIndex: i, pages: [current] })
+        i++
+      } else if (next && !next.isLandscape) {
+        groups.push({ startIndex: i, pages: [current, next] })
+        i += 2
+      } else {
+        groups.push({ startIndex: i, pages: [current] })
+        i++
+      }
+    }
+    return groups
+  }, [pages])
+
+  const currentPageIsLandscape = pages[currentPage]?.isLandscape ?? false
+  const showSingleInDoubleMode = isDoublePageMode && currentPageIsLandscape
   const isLastPage = isDoublePageMode
-    ? currentPage >= totalPages - 2
+    ? doublePageGroups.length > 0 &&
+      currentPage === doublePageGroups.at(-1)?.startIndex
     : currentPage === totalPages - 1
   const isZoomed = zoomLevel > 1
   const isFullscreenActive = isFullscreen || isPseudoFullscreen
   const nextPageData =
-    isDoublePageMode && currentPage + 1 < totalPages ? pages[currentPage + 1] : null
+    isDoublePageMode && !currentPageIsLandscape && currentPage + 1 < totalPages
+      ? pages[currentPage + 1]
+      : null
 
   const authUserId = getAuthUserFromCookie()?.id ?? null
 
@@ -102,6 +133,57 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     [authUserId],
   )
 
+  const computeMaxZoom = useCallback(() => {
+    const page = pages[currentPage]
+    if (!page || page.width <= 0 || page.height <= 0) return
+
+    const svh = window.innerHeight
+    const maxImageHeight = isFullscreenActive ? svh : svh - 152
+    const screenWidth = window.innerWidth
+
+    if (screenWidth <= 0 || maxImageHeight <= 0) return
+
+    const getBaseWidth = (p: ComicPage) => {
+      const imageHeight = Math.min(p.height, maxImageHeight)
+      return imageHeight * (p.width / p.height)
+    }
+
+    let contentWidth: number
+    if (isDoublePageMode && !currentPageIsLandscape) {
+      const nextPage = pages[currentPage + 1]
+      if (nextPage && !nextPage.isLandscape) {
+        contentWidth = getBaseWidth(page) + getBaseWidth(nextPage) + 8 // gap-2
+      } else {
+        contentWidth = getBaseWidth(page)
+      }
+    } else {
+      contentWidth = getBaseWidth(page)
+    }
+
+    const computed = Math.floor((screenWidth / contentWidth) * 100) / 100
+    const clamped = Math.max(MIN_ZOOM, computed)
+    setMaxZoomLevel(clamped)
+    setZoomLevel((prev) => {
+      if (prev > clamped) {
+        setPanPosition({ x: 0, y: 0 })
+        lastPanPositionRef.current = { x: 0, y: 0 }
+        return clamped
+      }
+      return prev
+    })
+  }, [pages, currentPage, isDoublePageMode, currentPageIsLandscape, isFullscreenActive])
+
+  useEffect(() => {
+    if (pages.length === 0) return
+    const timer = setTimeout(computeMaxZoom, 100)
+    return () => clearTimeout(timer)
+  }, [pages.length, currentPage, isDoublePageMode, isFullscreenActive, computeMaxZoom])
+
+  useEffect(() => {
+    window.addEventListener("resize", computeMaxZoom)
+    return () => window.removeEventListener("resize", computeMaxZoom)
+  }, [computeMaxZoom])
+
   const resetZoom = useCallback(() => {
     setZoomLevel(1)
     setPanPosition({ x: 0, y: 0 })
@@ -109,8 +191,8 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
   }, [])
 
   const zoomIn = useCallback(() => {
-    setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM))
-  }, [])
+    setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, maxZoomLevel))
+  }, [maxZoomLevel])
 
   const zoomOut = useCallback(() => {
     setZoomLevel((prev) => {
@@ -127,28 +209,52 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     if (zoomLevel > 1) {
       resetZoom()
     } else {
-      setZoomLevel(2)
+      setZoomLevel(Math.min(2, maxZoomLevel))
     }
-  }, [zoomLevel, resetZoom])
+  }, [zoomLevel, resetZoom, maxZoomLevel])
 
   const goToNextPage = useCallback(() => {
-    if (!isLastPage) {
-      const step = isDoublePageMode ? 2 : 1
-      setCurrentPage((prev) => Math.min(prev + step, totalPages - 1))
+    if (isLastPage) return
+    if (!isDoublePageMode) {
+      setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))
+      return
     }
-  }, [isLastPage, isDoublePageMode, totalPages])
+    const groupIndex = doublePageGroups.findIndex((g) => g.startIndex === currentPage)
+    const nextGroup = doublePageGroups[groupIndex + 1]
+    if (groupIndex !== -1 && nextGroup) {
+      setCurrentPage(nextGroup.startIndex)
+    }
+  }, [isLastPage, isDoublePageMode, totalPages, doublePageGroups, currentPage])
 
   const goToPrevPage = useCallback(() => {
-    if (!isFirstPage) {
-      const step = isDoublePageMode ? 2 : 1
-      setCurrentPage((prev) => Math.max(prev - step, 0))
+    if (isFirstPage) return
+    if (!isDoublePageMode) {
+      setCurrentPage((prev) => Math.max(prev - 1, 0))
+      return
     }
-  }, [isFirstPage, isDoublePageMode])
+    const groupIndex = doublePageGroups.findIndex((g) => g.startIndex === currentPage)
+    const prevGroup = doublePageGroups[groupIndex - 1]
+    if (prevGroup) {
+      setCurrentPage(prevGroup.startIndex)
+    }
+  }, [isFirstPage, isDoublePageMode, doublePageGroups, currentPage])
 
   const toggleDoublePageMode = useCallback(() => {
-    setIsDoublePageMode((prev) => !prev)
-    setCurrentPage((prev) => (prev % 2 === 1 ? prev - 1 : prev))
-  }, [])
+    setIsDoublePageMode((prev) => {
+      const newMode = !prev
+      if (newMode && doublePageGroups.length > 0) {
+        const group = doublePageGroups.find(
+          (g) =>
+            currentPage >= g.startIndex &&
+            currentPage < g.startIndex + g.pages.length,
+        )
+        if (group && currentPage !== group.startIndex) {
+          setCurrentPage(group.startIndex)
+        }
+      }
+      return newMode
+    })
+  }, [doublePageGroups, currentPage])
 
   const goToPage = useCallback(
     (page: number) => {
@@ -344,9 +450,6 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
       } else if (event.key === "f" || event.key === "F") {
         event.preventDefault()
         toggleFullscreen()
-      } else if (event.key === "z" || event.key === "Z") {
-        event.preventDefault()
-        toggleZoom()
       } else if (event.key === "Escape") {
         if (isFullscreenActive) {
           event.preventDefault()
@@ -368,7 +471,6 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
       goToPage,
       totalPages,
       toggleFullscreen,
-      toggleZoom,
       isFullscreenActive,
       isZoomed,
       resetZoom,
@@ -383,61 +485,6 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handleKeyDown])
 
-  const handleWheel = useCallback(
-    (event: WheelEvent) => {
-      if (event.deltaY === 0) return
-
-      const now = Date.now()
-      if (now - lastWheelTriggerRef.current < SCROLL_COOLDOWN_MS) {
-        return
-      }
-
-      wheelAccumulatorRef.current += event.deltaY
-
-      if (wheelResetTimeoutRef.current) {
-        clearTimeout(wheelResetTimeoutRef.current)
-      }
-      wheelResetTimeoutRef.current = setTimeout(() => {
-        wheelAccumulatorRef.current = 0
-      }, SCROLL_RESET_DELAY_MS)
-
-      if (Math.abs(wheelAccumulatorRef.current) < SCROLL_THRESHOLD) {
-        return
-      }
-
-      let didNavigate = false
-
-      if (wheelAccumulatorRef.current > 0) {
-        if (!isLastPage) {
-          event.preventDefault()
-          goToNextPage()
-          didNavigate = true
-        }
-      } else if (!isFirstPage) {
-        event.preventDefault()
-        goToPrevPage()
-        didNavigate = true
-      }
-
-      wheelAccumulatorRef.current = 0
-      if (didNavigate) {
-        lastWheelTriggerRef.current = now
-      }
-    },
-    [goToNextPage, goToPrevPage, isFirstPage, isLastPage],
-  )
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    const handleWheelEvent = (event: WheelEvent) => {
-      handleWheel(event)
-    }
-
-    container.addEventListener("wheel", handleWheelEvent, { passive: false })
-    return () => container.removeEventListener("wheel", handleWheelEvent)
-  }, [handleWheel])
 
   useEffect(() => {
     return () => {
@@ -478,15 +525,6 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     resumeHandledRef.current = true
   }, [comicId, isProgressForUser, loadingState, totalPages])
 
-  const prevPageRef = useRef(currentPage)
-  useEffect(() => {
-    if (prevPageRef.current !== currentPage) {
-      setZoomLevel(1)
-      setPanPosition({ x: 0, y: 0 })
-      lastPanPositionRef.current = { x: 0, y: 0 }
-      prevPageRef.current = currentPage
-    }
-  }, [currentPage])
 
   useEffect(() => {
     if (!comicId || loadingState !== "ready" || totalPages === 0 || isResumeModalOpen) {
@@ -562,7 +600,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
           const delta = currentDistance - lastTouchDistanceRef.current
           const zoomDelta = delta * 0.01
           setZoomLevel((prev) => {
-            const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + zoomDelta))
+            const newZoom = Math.max(MIN_ZOOM, Math.min(maxZoomLevel, prev + zoomDelta))
             if (newZoom === MIN_ZOOM) {
               setPanPosition({ x: 0, y: 0 })
               lastPanPositionRef.current = { x: 0, y: 0 }
@@ -579,7 +617,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
         setPanPosition({ x: newX, y: newY })
       }
     },
-    [isZoomed, getTouchDistance],
+    [isZoomed, getTouchDistance, maxZoomLevel],
   )
 
   const handleTouchEnd = useCallback(() => {
@@ -708,7 +746,21 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
           const file = imageFiles[i]
           const extractedFile = await file.file.extract()
           const url = URL.createObjectURL(extractedFile)
-          extractedPages.push({ name: file.file.name, url })
+
+          const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+            const img = new window.Image()
+            img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+            img.onerror = () => resolve({ width: 0, height: 0 })
+            img.src = url
+          })
+
+          extractedPages.push({
+            name: file.file.name,
+            url,
+            width: dimensions.width,
+            height: dimensions.height,
+            isLandscape: dimensions.width > dimensions.height,
+          })
           setProgress(50 + Math.round(((i + 1) / imageFiles.length) * 50))
         }
 
@@ -794,6 +846,8 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     panPosition,
     isZoomed,
     isDoublePageMode,
+    showSingleInDoubleMode,
+    doublePageGroups,
     goToNextPage,
     goToPrevPage,
     goToPage,
@@ -804,6 +858,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId }: UseComicRea
     zoomOut,
     toggleZoom,
     resetZoom,
+    maxZoomLevel,
     resumePage,
     isResumeModalOpen,
     handleResumeReading,
