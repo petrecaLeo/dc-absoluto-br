@@ -1,13 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
 import { PROFILE_IMAGE_OPTIONS } from "@dc-absoluto/shared-types"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-import type { AuthUser } from "@/components/header/auth.types"
 import { storeUser, subscribeAuthChanges } from "@/components/header/auth.storage"
+import type { AuthUser } from "@/components/header/auth.types"
 import { parseAuthUser } from "@/components/header/auth.validation"
 
 export type ProfileImageStatus = "idle" | "saving" | "success" | "error"
+export type NameEditStatus = "idle" | "editing" | "saving" | "success" | "error"
 
 const ACCENT_COLOR = "var(--color-dc-blue)"
 
@@ -31,6 +32,15 @@ interface PerfilIdentidadeState {
   closeModal: () => void
   selectImage: (id: string) => void
   saveImage: () => Promise<void>
+  nameEditStatus: NameEditStatus
+  editingName: string
+  nameMessage: string
+  isNameSaving: boolean
+  canSaveName: boolean
+  startEditingName: () => void
+  cancelEditingName: () => void
+  setEditingName: (name: string) => void
+  saveName: () => Promise<void>
 }
 
 export function usePerfilIdentidade(initialAuthUser: AuthUser): PerfilIdentidadeState {
@@ -41,6 +51,10 @@ export function usePerfilIdentidade(initialAuthUser: AuthUser): PerfilIdentidade
   )
   const [status, setStatus] = useState<ProfileImageStatus>("idle")
   const [message, setMessage] = useState("")
+
+  const [nameEditStatus, setNameEditStatus] = useState<NameEditStatus>("idle")
+  const [editingName, setEditingName] = useState("")
+  const [nameMessage, setNameMessage] = useState("")
 
   useEffect(() => {
     setAuthUser(initialAuthUser)
@@ -171,6 +185,56 @@ export function usePerfilIdentidade(initialAuthUser: AuthUser): PerfilIdentidade
     }
   }, [authUser, isSaving, selectedImage])
 
+  const startEditingName = useCallback(() => {
+    setEditingName(authUser.name)
+    setNameEditStatus("editing")
+    setNameMessage("")
+  }, [authUser.name])
+
+  const cancelEditingName = useCallback(() => {
+    setNameEditStatus("idle")
+    setEditingName("")
+    setNameMessage("")
+  }, [])
+
+  const isNameSaving = nameEditStatus === "saving"
+  const trimmedName = editingName.trim().replace(/\s+/g, " ")
+  const canSaveName = trimmedName.length >= 2 && trimmedName !== authUser.name && !isNameSaving
+
+  const saveName = useCallback(async () => {
+    if (!canSaveName) return
+
+    setNameEditStatus("saving")
+    setNameMessage("")
+
+    try {
+      const response = await fetch("/api/auth/profile-name", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        const parsedUser = parseAuthUser(data.user)
+        const updatedUser = parsedUser ?? { ...authUser, name: trimmedName }
+
+        storeUser(updatedUser)
+        setAuthUser(updatedUser)
+        setNameEditStatus("success")
+        setNameMessage(data.message ?? "Nome atualizado com sucesso.")
+        return
+      }
+
+      setNameEditStatus("error")
+      setNameMessage(data.message ?? "Não foi possível atualizar o nome.")
+    } catch {
+      setNameEditStatus("error")
+      setNameMessage("Erro de conexão. Tente novamente.")
+    }
+  }, [authUser, canSaveName, trimmedName])
+
   return {
     authUser,
     isModalOpen,
@@ -186,5 +250,14 @@ export function usePerfilIdentidade(initialAuthUser: AuthUser): PerfilIdentidade
     closeModal,
     selectImage,
     saveImage,
+    nameEditStatus,
+    editingName,
+    nameMessage,
+    isNameSaving,
+    canSaveName,
+    startEditingName,
+    cancelEditingName,
+    setEditingName,
+    saveName,
   }
 }

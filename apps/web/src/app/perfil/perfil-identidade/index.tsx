@@ -25,7 +25,18 @@ export function PerfilIdentidade({ initialAuthUser }: PerfilIdentidadeProps) {
     closeModal,
     selectImage,
     saveImage,
+    nameEditStatus,
+    editingName,
+    nameMessage,
+    isNameSaving,
+    canSaveName,
+    startEditingName,
+    cancelEditingName,
+    setEditingName,
+    saveName,
   } = usePerfilIdentidade(initialAuthUser)
+
+  const isEditingName = nameEditStatus === "editing" || nameEditStatus === "saving"
 
   const modal =
     isModalOpen && typeof document !== "undefined"
@@ -183,9 +194,79 @@ export function PerfilIdentidade({ initialAuthUser }: PerfilIdentidadeProps) {
               className="border-white/20"
             />
             <div>
-              <h1 className="line-clamp-1 text-2xl font-bold text-white sm:text-3xl">
-                {authUser.name}
-              </h1>
+              <div className="flex h-9 items-center gap-2 sm:h-10">
+                {isEditingName ? (
+                  <form
+                    className="flex items-center gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      void saveName()
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(event) => setEditingName(event.target.value)}
+                      disabled={isNameSaving}
+                      maxLength={255}
+                      autoFocus
+                      className="w-full max-w-64 rounded-lg border border-white/20 bg-white/10 px-2 py-0 text-2xl font-bold text-white outline-none transition-colors focus:border-white/40 disabled:opacity-60 sm:text-3xl"
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") cancelEditingName()
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!canSaveName}
+                      className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/20 text-sm text-emerald-400 transition-colors hover:border-emerald-400/40 hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Salvar nome"
+                    >
+                      {isNameSaving ? "…" : "✓"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditingName}
+                      disabled={isNameSaving}
+                      className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/20 text-sm text-white/60 transition-colors hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Cancelar edição"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <h1 className="line-clamp-1 text-2xl font-bold text-white sm:text-3xl">
+                      {authUser.name}
+                    </h1>
+                    <button
+                      type="button"
+                      onClick={startEditingName}
+                      className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/30 transition-colors hover:bg-white/10 hover:text-white/70"
+                      aria-label="Editar nome"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                        className="h-5 w-5"
+                      >
+                        <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474Z" />
+                        <path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 1 14 9v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
+              {nameEditStatus === "error" && nameMessage && (
+                <p role="alert" className="mt-1 text-xs text-red-400">
+                  {nameMessage}
+                </p>
+              )}
+              {nameEditStatus === "success" && nameMessage && (
+                <p role="status" className="mt-1 text-xs font-semibold text-emerald-300">
+                  {nameMessage}
+                </p>
+              )}
               <p className="mt-1 line-clamp-1 text-white/70">{authUser.email}</p>
             </div>
           </div>

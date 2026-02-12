@@ -1,6 +1,6 @@
+import { PROFILE_IMAGE_OPTIONS } from "@dc-absoluto/shared-types"
 import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
-import { PROFILE_IMAGE_OPTIONS } from "@dc-absoluto/shared-types"
 import { db, isDbAvailable } from "../db"
 import { userEmailVerifications, users } from "../db/schema"
 import { sendEmailVerificationEmail } from "../services/email"
@@ -73,15 +73,13 @@ export const auth = new Elysia({ prefix: "/auth" })
           })
           .where(eq(userEmailVerifications.id, pendingRegistration.id))
       } else {
-        await db!
-          .insert(userEmailVerifications)
-          .values({
-            name: normalizedName,
-            email: normalizedEmail,
-            passwordHash,
-            token,
-            expiresAt,
-          })
+        await db!.insert(userEmailVerifications).values({
+          name: normalizedName,
+          email: normalizedEmail,
+          passwordHash,
+          token,
+          expiresAt,
+        })
       }
 
       const emailResult = await sendEmailVerificationEmail({
@@ -94,15 +92,13 @@ export const auth = new Elysia({ prefix: "/auth" })
         set.status = 500
         return {
           success: false,
-          message:
-            "Não foi possível enviar o e-mail de confirmação. Tente novamente mais tarde.",
+          message: "Não foi possível enviar o e-mail de confirmação. Tente novamente mais tarde.",
         }
       }
 
       return {
         success: true,
-        message:
-          "Enviamos um e-mail de confirmação. O link expira em 24 horas.",
+        message: "Enviamos um e-mail de confirmação. O link expira em 24 horas.",
       }
     },
     {
@@ -131,11 +127,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         }
       }
 
-      const [user] = await db!
-        .select()
-        .from(users)
-        .where(eq(users.email, normalizedEmail))
-        .limit(1)
+      const [user] = await db!.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
 
       if (!user) {
         const [pending] = await db!
@@ -155,8 +147,7 @@ export const auth = new Elysia({ prefix: "/auth" })
             set.status = 410
             return {
               success: false,
-              message:
-                "Seu link de confirmação expirou. Faça um novo cadastro.",
+              message: "Seu link de confirmação expirou. Faça um novo cadastro.",
             }
           }
 
@@ -221,10 +212,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           return { success: false, message: "Usuário não autenticado." }
         }
 
-        const isPasswordValid = await Bun.password.verify(
-          body.currentPassword,
-          user.passwordHash,
-        )
+        const isPasswordValid = await Bun.password.verify(body.currentPassword, user.passwordHash)
 
         if (!isPasswordValid) {
           set.status = 401
@@ -328,6 +316,70 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
   )
   .post(
+    "/profile-name",
+    async ({ body, request, set }) => {
+      const authUser = getAuthUserFromRequest(request)
+      if (!authUser) {
+        set.status = 401
+        return { success: false, message: "Usuário não autenticado." }
+      }
+
+      const name = normalizeName(body.name)
+      if (name.length < 2) {
+        set.status = 400
+        return { success: false, message: "O nome precisa ter pelo menos 2 caracteres." }
+      }
+
+      if (!isDbAvailable) {
+        return {
+          success: true,
+          message: "Nome atualizado (ambiente sem banco).",
+          user: {
+            id: authUser.id,
+            name,
+            email: authUser.email,
+            profileImage: authUser.profileImage,
+          },
+        }
+      }
+
+      try {
+        const [user] = await db!
+          .select()
+          .from(users)
+          .where(eq(users.email, authUser.email))
+          .limit(1)
+
+        if (!user) {
+          set.status = 401
+          return { success: false, message: "Usuário não autenticado." }
+        }
+
+        await db!.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, user.id))
+
+        return {
+          success: true,
+          message: "Nome atualizado com sucesso.",
+          user: {
+            id: user.id,
+            name,
+            email: user.email,
+            profileImage: user.profileImage,
+          },
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar nome:", error)
+        set.status = 500
+        return { success: false, message: "Erro ao atualizar nome." }
+      }
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 2, maxLength: 255 }),
+      }),
+    },
+  )
+  .post(
     "/verify-email",
     async ({ body, set }) => {
       if (!isDbAvailable) {
@@ -347,9 +399,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       const isExpired = pending.expiresAt.getTime() < Date.now()
       if (isExpired) {
-        await db!
-          .delete(userEmailVerifications)
-          .where(eq(userEmailVerifications.id, pending.id))
+        await db!.delete(userEmailVerifications).where(eq(userEmailVerifications.id, pending.id))
 
         set.status = 410
         return { success: false, message: "Este link expirou. Faça um novo cadastro." }
@@ -362,9 +412,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         .limit(1)
 
       if (existingUser) {
-        await db!
-          .delete(userEmailVerifications)
-          .where(eq(userEmailVerifications.id, pending.id))
+        await db!.delete(userEmailVerifications).where(eq(userEmailVerifications.id, pending.id))
 
         return { success: true, message: "E-mail já confirmado. Faça login." }
       }
@@ -375,9 +423,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         passwordHash: pending.passwordHash,
       })
 
-      await db!
-        .delete(userEmailVerifications)
-        .where(eq(userEmailVerifications.id, pending.id))
+      await db!.delete(userEmailVerifications).where(eq(userEmailVerifications.id, pending.id))
 
       return { success: true, message: "E-mail confirmado com sucesso." }
     },
@@ -399,11 +445,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         }
       }
 
-      const [user] = await db!
-        .select()
-        .from(users)
-        .where(eq(users.email, normalizedEmail))
-        .limit(1)
+      const [user] = await db!.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
 
       if (user) {
         return { success: true, message: "E-mail já confirmado. Faça login." }
@@ -441,8 +483,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         set.status = 500
         return {
           success: false,
-          message:
-            "Não foi possível reenviar o e-mail de confirmação. Tente novamente mais tarde.",
+          message: "Não foi possível reenviar o e-mail de confirmação. Tente novamente mais tarde.",
         }
       }
 
