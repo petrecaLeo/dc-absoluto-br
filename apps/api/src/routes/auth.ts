@@ -2,13 +2,14 @@ import { PROFILE_IMAGE_OPTIONS } from "@dc-absoluto/shared-types"
 import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db, isDbAvailable } from "../db"
-import { userEmailVerifications, users } from "../db/schema"
-import { sendEmailVerificationEmail } from "../services/email"
+import { passwordResetTokens, userEmailVerifications, users } from "../db/schema"
+import { sendEmailVerificationEmail, sendPasswordResetEmail } from "../services/email"
 import { getAuthUserFromRequest } from "../utils/auth"
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
 const PASSWORD_PATTERN = "^(?=.*\\d).{6,}$"
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 const PROFILE_IMAGE_IDS = new Set(PROFILE_IMAGE_OPTIONS.map((option) => option.id))
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
@@ -430,6 +431,91 @@ export const auth = new Elysia({ prefix: "/auth" })
     {
       body: t.Object({
         token: t.String({ minLength: 10, maxLength: 255 }),
+      }),
+    },
+  )
+  .post(
+    "/request-password-reset",
+    async ({ body }) => {
+      const normalizedEmail = normalizeEmail(body.email)
+      const successMessage =
+        "Se o e-mail estiver cadastrado, enviaremos um link para redefinir a senha."
+
+      if (!isDbAvailable) {
+        return { success: true, message: successMessage }
+      }
+
+      const [user] = await db!.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
+
+      if (!user) {
+        return { success: true, message: successMessage }
+      }
+
+      const token = createVerificationToken()
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS)
+
+      await db!.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id))
+
+      await db!.insert(passwordResetTokens).values({
+        userId: user.id,
+        token,
+        expiresAt,
+      })
+
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        token,
+      })
+
+      return { success: true, message: successMessage }
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: "email", pattern: EMAIL_PATTERN }),
+      }),
+    },
+  )
+  .post(
+    "/reset-password",
+    async ({ body, set }) => {
+      if (!isDbAvailable) {
+        return { success: true, message: "Senha redefinida (ambiente sem banco)." }
+      }
+
+      const [resetToken] = await db!
+        .select()
+        .from(passwordResetTokens)
+        .where(eq(passwordResetTokens.token, body.token))
+        .limit(1)
+
+      if (!resetToken) {
+        set.status = 404
+        return { success: false, message: "Link inválido ou já utilizado." }
+      }
+
+      if (resetToken.expiresAt.getTime() < Date.now()) {
+        await db!.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetToken.id))
+
+        set.status = 410
+        return { success: false, message: "Este link expirou. Solicite um novo link." }
+      }
+
+      const passwordHash = await Bun.password.hash(body.password)
+
+      await db!
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, resetToken.userId))
+
+      await db!.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetToken.id))
+
+      return { success: true, message: "Senha redefinida com sucesso." }
+    },
+    {
+      body: t.Object({
+        token: t.String({ minLength: 10, maxLength: 255 }),
+        password: t.String({ minLength: 6, maxLength: 128, pattern: PASSWORD_PATTERN }),
       }),
     },
   )

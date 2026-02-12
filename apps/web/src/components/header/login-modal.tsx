@@ -30,6 +30,7 @@ export function LoginModal({
     status,
     message,
     submit,
+    requestPasswordReset,
     resendVerification,
     reset,
     emailPattern,
@@ -96,6 +97,10 @@ export function LoginModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (mode === "forgot-password") {
+      await requestPasswordReset()
+      return
+    }
     const user = await submit()
     if (user) {
       onAuthSuccess(user)
@@ -182,12 +187,18 @@ export function LoginModal({
                 id={titleId}
                 className="mb-2 text-2xl font-black uppercase tracking-wide text-white"
               >
-                {mode === "signup" ? "Criar conta" : "Entrar"}
+                {mode === "signup"
+                  ? "Criar conta"
+                  : mode === "forgot-password"
+                    ? "Redefinir senha"
+                    : "Entrar"}
               </h3>
               <p id={descriptionId} className="text-sm leading-relaxed text-gray-400">
                 {mode === "signup"
                   ? "Crie uma conta para personalizar sua experiência."
-                  : "Entre para não perder nenhuma novidade!"}
+                  : mode === "forgot-password"
+                    ? "Digite seu e-mail para receber um link de redefinição."
+                    : "Entre para não perder nenhuma novidade!"}
               </p>
             </div>
 
@@ -240,72 +251,74 @@ export function LoginModal({
                 />
               </div>
 
-              <div className="group">
-                <label htmlFor={passwordId} className="sr-only">
-                  Senha
-                </label>
-                <div className="relative">
-                  <input
-                    id={passwordId}
-                    type={isPasswordVisible ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Sua senha"
-                    required
-                    minLength={6}
-                    pattern={passwordPattern}
-                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 pr-14 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2"
-                    style={
-                      {
-                        "--tw-ring-color": accentColor,
-                      } as React.CSSProperties
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsPasswordVisible((current) => !current)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-white/60 transition-colors hover:text-white"
-                    aria-label={isPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {isPasswordVisible ? (
-                      <svg
-                        aria-hidden="true"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M4 4l16 16" />
-                      </svg>
-                    ) : (
-                      <svg
-                        aria-hidden="true"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
+              {mode !== "forgot-password" && (
+                <div className="group">
+                  <label htmlFor={passwordId} className="sr-only">
+                    Senha
+                  </label>
+                  <div className="relative">
+                    <input
+                      id={passwordId}
+                      type={isPasswordVisible ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Sua senha"
+                      required
+                      minLength={6}
+                      pattern={passwordPattern}
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 pr-14 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2"
+                      style={
+                        {
+                          "--tw-ring-color": accentColor,
+                        } as React.CSSProperties
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsPasswordVisible((current) => !current)}
+                      className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-white/60 transition-colors hover:text-white"
+                      aria-label={isPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {isPasswordVisible ? (
+                        <svg
+                          aria-hidden="true"
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                          <circle cx="12" cy="12" r="3" />
+                          <path d="M4 4l16 16" />
+                        </svg>
+                      ) : (
+                        <svg
+                          aria-hidden="true"
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {mode === "signup" && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Senha com no mínimo 6 caracteres e 1 número.
+                    </p>
+                  )}
                 </div>
-                {mode === "signup" && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    Senha com no mínimo 6 caracteres e 1 número.
-                  </p>
-                )}
-              </div>
+              )}
 
               {status === "error" && (
                 <p role="alert" className="text-sm text-red-400">
@@ -343,30 +356,53 @@ export function LoginModal({
                   {status === "loading"
                     ? mode === "signup"
                       ? "Criando..."
-                      : "Entrando..."
+                      : mode === "forgot-password"
+                        ? "Enviando..."
+                        : "Entrando..."
                     : mode === "signup"
                       ? "Criar conta"
-                      : "Entrar"}
+                      : mode === "forgot-password"
+                        ? "Enviar link"
+                        : "Entrar"}
                 </span>
               </button>
             </form>
 
-            <div className="mt-4 text-center text-sm text-white/60">
-              {mode === "login" ? (
-                <button
-                  type="button"
-                  onClick={() => setMode("signup")}
-                  className="cursor-pointer font-semibold text-white/80 transition-colors hover:text-white"
-                >
-                  Não tem conta? Criar agora
-                </button>
-              ) : (
+            <div className="mt-4 flex flex-col items-center gap-2 text-sm text-white/60">
+              {mode === "login" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setMode("signup")}
+                    className="cursor-pointer font-semibold text-white/80 transition-colors hover:text-white"
+                  >
+                    Não tem conta? Criar agora
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("forgot-password")}
+                    className="cursor-pointer text-xs text-white/50 transition-colors hover:text-white"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </>
+              )}
+              {mode === "signup" && (
                 <button
                   type="button"
                   onClick={() => setMode("login")}
                   className="cursor-pointer font-semibold text-white/80 transition-colors hover:text-white"
                 >
                   Já tem conta? Entrar
+                </button>
+              )}
+              {mode === "forgot-password" && (
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="cursor-pointer font-semibold text-white/80 transition-colors hover:text-white"
+                >
+                  Voltar para o login
                 </button>
               )}
             </div>

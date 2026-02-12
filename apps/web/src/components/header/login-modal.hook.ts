@@ -1,12 +1,12 @@
 "use client"
 
-import { useCallback, useState } from "react"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { useCallback, useState } from "react"
 import type { AuthUser } from "./auth.types"
 
 const API_URL = PUBLIC_API_URL
 
-export type AuthMode = "signup" | "login"
+export type AuthMode = "signup" | "login" | "forgot-password"
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
 const PASSWORD_PATTERN = "^(?=.*\\d).{6,}$"
@@ -96,6 +96,42 @@ export function useLoginModal() {
     }
   }, [API_URL, email, mode, name, password, validate])
 
+  const requestPasswordReset = useCallback(async () => {
+    if (!emailRegex.test(email.trim())) {
+      setStatus("error")
+      setMessage("Digite um e-mail válido.")
+      return
+    }
+
+    setStatus("loading")
+    setMessage("")
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/request-password-reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        setStatus("success")
+        setMessage(
+          data.message ??
+            "Se o e-mail estiver cadastrado, enviaremos um link para redefinir a senha.",
+        )
+        return
+      }
+
+      setStatus("error")
+      setMessage(data.message ?? "Não foi possível processar a solicitação.")
+    } catch {
+      setStatus("error")
+      setMessage("Erro de conexão. Tente novamente.")
+    }
+  }, [API_URL, email])
+
   const resendVerification = useCallback(async () => {
     if (!emailRegex.test(email.trim())) {
       setStatus("error")
@@ -161,6 +197,7 @@ export function useLoginModal() {
     status,
     message,
     submit,
+    requestPasswordReset,
     resendVerification,
     reset,
     emailPattern: EMAIL_PATTERN,
