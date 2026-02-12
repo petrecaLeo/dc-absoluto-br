@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation"
 
 import { getServerAuthUser } from "@/components/header/auth.server"
-import { PerfilIdentidade } from "./perfil-identidade"
-import { PerfilHeader } from "./perfil-header"
 import { PerfilConquistas } from "./perfil-conquistas"
+import { PerfilHeader } from "./perfil-header"
 import { PerfilHqsLidas } from "./perfil-hqs-lidas"
+import { PerfilIdentidade } from "./perfil-identidade"
 import { PerfilSenha } from "./perfil-senha"
 
 export default async function PerfilPage() {

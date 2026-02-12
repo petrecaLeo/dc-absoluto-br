@@ -118,9 +118,11 @@ export function PerfilSenha() {
               minLength={6}
               autoComplete="current-password"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 pr-14 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2"
-              style={{
-                "--tw-ring-color": "var(--color-dc-blue)",
-              } as React.CSSProperties}
+              style={
+                {
+                  "--tw-ring-color": "var(--color-dc-blue)",
+                } as React.CSSProperties
+              }
             />
             <button
               type="button"
@@ -181,9 +183,11 @@ export function PerfilSenha() {
               pattern={PASSWORD_PATTERN}
               autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 pr-14 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2"
-              style={{
-                "--tw-ring-color": "var(--color-dc-blue)",
-              } as React.CSSProperties}
+              style={
+                {
+                  "--tw-ring-color": "var(--color-dc-blue)",
+                } as React.CSSProperties
+              }
             />
             <button
               type="button"
@@ -223,9 +227,7 @@ export function PerfilSenha() {
               )}
             </button>
           </div>
-          <p className="mt-2 text-xs text-gray-500">
-            Senha com no mínimo 6 caracteres e 1 número.
-          </p>
+          <p className="mt-2 text-xs text-gray-500">Senha com no mínimo 6 caracteres e 1 número.</p>
         </div>
 
         <div className="group relative">
@@ -246,9 +248,11 @@ export function PerfilSenha() {
               minLength={6}
               autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-4 pr-14 text-white placeholder-gray-600 outline-none transition-all duration-300 focus:border-transparent focus:ring-2"
-              style={{
-                "--tw-ring-color": "var(--color-dc-blue)",
-              } as React.CSSProperties}
+              style={
+                {
+                  "--tw-ring-color": "var(--color-dc-blue)",
+                } as React.CSSProperties
+              }
             />
             <button
               type="button"
@@ -311,9 +315,7 @@ export function PerfilSenha() {
               "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 42%, #dc2626 75%, #facc15 100%)",
           }}
         >
-          <span className="relative z-10">
-            {isLoading ? "Salvando..." : "Alterar senha"}
-          </span>
+          <span className="relative z-10">{isLoading ? "Salvando..." : "Alterar senha"}</span>
         </button>
       </form>
     </section>

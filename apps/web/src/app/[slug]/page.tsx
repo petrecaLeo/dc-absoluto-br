@@ -1,15 +1,15 @@
 import type { Metadata } from "next"
-import { cache } from "react"
 import { cookies } from "next/headers"
+import { cache } from "react"
 
 import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
 import { getServerAuthUser } from "@/components/header/auth.server"
 import { getCharacterImages } from "@/constants/character-images"
+import { SERVER_API_URL } from "@/lib/env/server"
 import { SITE_DESCRIPTION } from "@/lib/seo"
 import { deduplicateById } from "@/utils/deduplicate-by-id"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
 import { CharacterPageContent } from "./character-page-content"
-import { SERVER_API_URL } from "@/lib/env/server"
 
 interface CharacterComicsResponse {
   data: Comic[] | null
@@ -123,9 +123,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   const authUser = await getServerAuthUser()
   const cookieStore = await cookies()
   const authCookieValue = cookieStore.get(AUTH_COOKIE_KEY)?.value
-  const readComics = authUser
-    ? await getReadComicsByCharacter(slug, authCookieValue)
-    : []
+  const readComics = authUser ? await getReadComicsByCharacter(slug, authCookieValue) : []
 
   if (!result || !result.data) {
     return (

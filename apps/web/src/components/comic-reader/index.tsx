@@ -24,7 +24,13 @@ interface ComicReaderProps {
   disableReadTracking?: boolean
 }
 
-export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId, disableReadTracking }: ComicReaderProps) {
+export function ComicReader({
+  downloadUrl,
+  comicTitle,
+  backUrl,
+  comicId,
+  disableReadTracking,
+}: ComicReaderProps) {
   const {
     pages,
     currentPage,
@@ -270,7 +276,6 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId, disable
     }
   }, [pages.length, goToPage])
 
-
   if (loadingState === "idle" || loadingState === "loading" || loadingState === "extracting") {
     return (
       <div className="flex min-h-svh flex-col bg-dc-black">
@@ -357,9 +362,7 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId, disable
     <div
       ref={containerRef}
       className={`flex h-svh flex-col overflow-hidden bg-dc-black ${
-        isPseudoFullscreen
-          ? "fixed inset-0 z-[9999] h-[100dvh] w-[100vw] overscroll-none"
-          : ""
+        isPseudoFullscreen ? "fixed inset-0 z-[9999] h-[100dvh] w-[100vw] overscroll-none" : ""
       }`}
     >
       <ResumeReadingModal
@@ -375,7 +378,8 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId, disable
         ref={headerRef}
         className={`z-50 flex shrink-0 flex-wrap items-center gap-2 border-b border-white/5 bg-dc-black/80 px-4 py-3 backdrop-blur-xl transition-all duration-300 md:flex-nowrap md:justify-between ${
           isFullscreenActive ? "absolute top-0 left-0 right-0" : ""
-        } ${isPseudoFullscreen ? "pt-[calc(env(safe-area-inset-top)+0.75rem)]" : ""
+        } ${
+          isPseudoFullscreen ? "pt-[calc(env(safe-area-inset-top)+0.75rem)]" : ""
         } ${controlsHidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <Link
@@ -519,7 +523,8 @@ export function ComicReader({ downloadUrl, comicTitle, backUrl, comicId, disable
         ref={footerRef}
         className={`z-50 shrink-0 border-t border-white/5 bg-dc-black/80 px-4 py-4 backdrop-blur-xl transition-all duration-300 ${
           isFullscreenActive ? "absolute bottom-0 left-0 right-0" : ""
-        } ${isPseudoFullscreen ? "pb-[calc(env(safe-area-inset-bottom)+1rem)]" : ""
+        } ${
+          isPseudoFullscreen ? "pb-[calc(env(safe-area-inset-bottom)+1rem)]" : ""
         } ${controlsHidden ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <div className="mx-auto flex max-w-md items-center justify-center gap-3">

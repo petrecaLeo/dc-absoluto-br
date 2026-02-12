@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 
+import { SERVER_API_URL } from "@/lib/env/server"
 import type { LatestComic } from "@/sections/home/latest-launch"
 import { PageContent } from "./page-content"
-import { SERVER_API_URL } from "@/lib/env/server"
 
 export const metadata: Metadata = {
   alternates: {

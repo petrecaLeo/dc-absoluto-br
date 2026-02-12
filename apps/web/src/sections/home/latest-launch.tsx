@@ -1,8 +1,8 @@
 "use client"
 
+import { PUBLIC_API_URL } from "@/lib/env/public"
 import Image from "next/image"
 import { useState } from "react"
-import { PUBLIC_API_URL } from "@/lib/env/public"
 
 export interface LatestComic {
   id: string

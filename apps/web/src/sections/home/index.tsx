@@ -3,7 +3,7 @@
 import Image from "next/image"
 
 import { useHome } from "./home.hook"
-import { LatestLaunch, type LatestComic } from "./latest-launch"
+import { type LatestComic, LatestLaunch } from "./latest-launch"
 
 interface HomeProps {
   latestComic: LatestComic | null

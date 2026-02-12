@@ -100,7 +100,10 @@ export function ResumeReadingModal({
               </span>
             </div>
 
-            <h3 id={titleId} className="mb-2 text-2xl font-black uppercase tracking-wide text-white">
+            <h3
+              id={titleId}
+              className="mb-2 text-2xl font-black uppercase tracking-wide text-white"
+            >
               {comicTitle}
             </h3>
             <p id={descriptionId} className="mb-6 text-sm leading-relaxed text-gray-400">

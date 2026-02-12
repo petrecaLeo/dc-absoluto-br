@@ -22,7 +22,7 @@ const sizeClasses: Record<
 export function useUserAvatar({ name, profileImage, size = "md" }: UseUserAvatarProps) {
   return useMemo(() => {
     const normalizedName = name.trim()
-    const initial = normalizedName ? normalizedName[0]?.toUpperCase() ?? "?" : "?"
+    const initial = normalizedName ? (normalizedName[0]?.toUpperCase() ?? "?") : "?"
     const normalizedImage = profileImage?.trim() ?? ""
     const imageSrc = normalizedImage ? `/images/profile/${normalizedImage}.webp` : null
     const sizeConfig = sizeClasses[size] ?? sizeClasses.md

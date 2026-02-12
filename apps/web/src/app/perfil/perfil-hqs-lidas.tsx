@@ -1,13 +1,13 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 
-import type { Character, Comic } from "@dc-absoluto/shared-types"
 import { getCharacterComicsClient, getCharactersClient } from "@/services/characters.client"
 import { getReadComicsByCharacter } from "@/services/read-comics.client"
+import type { Character, Comic } from "@dc-absoluto/shared-types"
 
 const CHARACTERS_STALE_TIME = 1000 * 60 * 60 * 24 * 7
 

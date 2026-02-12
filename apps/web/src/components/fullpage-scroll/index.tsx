@@ -9,8 +9,8 @@ function isInteractiveElement(target: Element | null) {
   if (!target) return false
   return Boolean(
     target.closest(
-      "input, textarea, select, option, [contenteditable='true'], [data-fullpage-ignore]"
-    )
+      "input, textarea, select, option, [contenteditable='true'], [data-fullpage-ignore]",
+    ),
   )
 }
 
@@ -81,15 +81,11 @@ export function FullPageScroll() {
     updateSections()
 
     const resizeObserver =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(scheduleOffsetsUpdate)
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleOffsetsUpdate)
     resizeObserver?.observe(rootRef.current)
 
     const mutationObserver =
-      typeof MutationObserver === "undefined"
-        ? null
-        : new MutationObserver(updateSections)
+      typeof MutationObserver === "undefined" ? null : new MutationObserver(updateSections)
     mutationObserver?.observe(rootRef.current, { childList: true })
 
     const handleWheel = (event: WheelEvent) => {

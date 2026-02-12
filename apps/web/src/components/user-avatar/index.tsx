@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 
-import { useUserAvatar, type UserAvatarSize } from "./user-avatar.hook"
+import { type UserAvatarSize, useUserAvatar } from "./user-avatar.hook"
 
 interface UserAvatarProps {
   name: string

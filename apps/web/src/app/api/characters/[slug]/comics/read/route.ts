@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
 
 import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
 import { SERVER_API_URL } from "@/lib/env/server"

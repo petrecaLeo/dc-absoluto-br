@@ -3,10 +3,10 @@
 import Image from "next/image"
 import { type FormEvent, useEffect, useState } from "react"
 
-import { useNewsletter } from "./newsletter.hook"
-import type { AuthUser } from "@/components/header/auth.types"
 import { getStoredUser, storeUser, subscribeAuthChanges } from "@/components/header/auth.storage"
+import type { AuthUser } from "@/components/header/auth.types"
 import { LoginModal } from "@/components/header/login-modal"
+import { useNewsletter } from "./newsletter.hook"
 
 export default function Newsletter() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)

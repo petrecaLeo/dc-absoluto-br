@@ -1,5 +1,5 @@
-import type { Character } from "@dc-absoluto/shared-types"
 import { SERVER_API_URL } from "@/lib/env/server"
+import type { Character } from "@dc-absoluto/shared-types"
 const CACHE_REVALIDATE_SECONDS = 60 * 60 * 24 * 7 // 1 semana
 const MAX_RETRIES = 1
 const RETRY_DELAY_MS = 1000

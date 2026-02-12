@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { useCallback, useEffect, useState } from "react"
 
 const API_URL = PUBLIC_API_URL
 

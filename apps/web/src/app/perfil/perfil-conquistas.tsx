@@ -1,7 +1,7 @@
 "use client"
 
-import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
+import Image from "next/image"
 
 import { getReadComicsCount } from "@/services/read-comics.client"
 
@@ -101,7 +101,9 @@ export function PerfilConquistas() {
         ) : isLoading ? (
           <div className="h-16 w-full animate-pulse rounded-xl border border-white/10 bg-white/10" />
         ) : currentLevel ? (
-          <div className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${LEVEL_STYLES[currentLevel.key].card}`}>
+          <div
+            className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${LEVEL_STYLES[currentLevel.key].card}`}
+          >
             <Image
               src={currentLevel.image}
               alt={`Moeda ${currentLevel.label}`}
@@ -134,9 +136,7 @@ export function PerfilConquistas() {
               <div
                 key={level.key}
                 className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white ${
-                  isCurrent
-                    ? "bg-white/10"
-                    : "text-white"
+                  isCurrent ? "bg-white/10" : "text-white"
                 } ${LEVEL_STYLES[level.key].border}`}
               >
                 <span className={`h-2 w-2 rounded-full ${LEVEL_STYLES[level.key].dot}`} />

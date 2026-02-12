@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useState } from "react"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { useCallback, useState } from "react"
 
 const API_URL = PUBLIC_API_URL
 const MAX_CHARACTERS = 2000

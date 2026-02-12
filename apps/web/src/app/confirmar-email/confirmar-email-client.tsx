@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
 type VerificationStatus = "loading" | "success" | "expired" | "invalid" | "error" | "missing"
 

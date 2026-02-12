@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
-import { getCachedComic, setCachedComic } from "@/services/comic-cache"
-import { PUBLIC_API_URL } from "@/lib/env/public"
 import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
+import { PUBLIC_API_URL } from "@/lib/env/public"
+import { getCachedComic, setCachedComic } from "@/services/comic-cache"
+import { type ReadingProgress, readingProgress } from "@/services/reading-progress"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface ComicPage {
   name: string
@@ -45,7 +45,12 @@ function getAuthUserFromCookie() {
   return decodeAuthCookie(value)
 }
 
-export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTracking }: UseComicReaderProps) {
+export function useComicReader({
+  downloadUrl,
+  comicTitle,
+  comicId,
+  disableReadTracking,
+}: UseComicReaderProps) {
   const [pages, setPages] = useState<ComicPage[]>([])
   const [currentPage, setCurrentPage] = useState(0)
   const [loadingState, setLoadingState] = useState<LoadingState>("idle")
@@ -114,8 +119,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
   const currentPageIsLandscape = pages[currentPage]?.isLandscape ?? false
   const showSingleInDoubleMode = isDoublePageMode && currentPageIsLandscape
   const isLastPage = isDoublePageMode
-    ? doublePageGroups.length > 0 &&
-      currentPage === doublePageGroups.at(-1)?.startIndex
+    ? doublePageGroups.length > 0 && currentPage === doublePageGroups.at(-1)?.startIndex
     : currentPage === totalPages - 1
   const isZoomed = zoomLevel > 1
   const isFullscreenActive = isFullscreen || isPseudoFullscreen
@@ -246,9 +250,7 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
       const newMode = !prev
       if (newMode && doublePageGroups.length > 0) {
         const group = doublePageGroups.find(
-          (g) =>
-            currentPage >= g.startIndex &&
-            currentPage < g.startIndex + g.pages.length,
+          (g) => currentPage >= g.startIndex && currentPage < g.startIndex + g.pages.length,
         )
         if (group && currentPage !== group.startIndex) {
           setCurrentPage(group.startIndex)
@@ -292,8 +294,8 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
     if (!container) return
 
     const fullscreenElement =
-      document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element })
-        .webkitFullscreenElement
+      document.fullscreenElement ||
+      (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement
 
     const exitFullscreen =
       document.exitFullscreen ||
@@ -487,7 +489,6 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handleKeyDown])
 
-
   useEffect(() => {
     return () => {
       if (wheelResetTimeoutRef.current) {
@@ -527,7 +528,6 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
     resumeHandledRef.current = true
   }, [comicId, isProgressForUser, loadingState, totalPages])
 
-
   useEffect(() => {
     if (!comicId || loadingState !== "ready" || totalPages === 0 || isResumeModalOpen) {
       return
@@ -542,19 +542,31 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
     }
 
     readingProgress.setProgress(comicId, currentPage, totalPages, authUserId)
-  }, [authUserId, comicId, currentPage, isResumeModalOpen, isProgressForUser, loadingState, totalPages])
+  }, [
+    authUserId,
+    comicId,
+    currentPage,
+    isResumeModalOpen,
+    isProgressForUser,
+    loadingState,
+    totalPages,
+  ])
 
   useEffect(() => {
-    if (disableReadTracking || !authUserId || !comicId || loadingState !== "ready" || totalPages === 0) {
+    if (
+      disableReadTracking ||
+      !authUserId ||
+      !comicId ||
+      loadingState !== "ready" ||
+      totalPages === 0
+    ) {
       return
     }
 
     if (hasMarkedReadRef.current) return
 
     const completionThreshold =
-      totalPages <= READING_COMPLETION_BUFFER
-        ? totalPages
-        : totalPages - READING_COMPLETION_BUFFER
+      totalPages <= READING_COMPLETION_BUFFER ? totalPages : totalPages - READING_COMPLETION_BUFFER
 
     if (currentPage + 1 < completionThreshold) return
 
@@ -766,7 +778,13 @@ export function useComicReader({ downloadUrl, comicTitle, comicId, disableReadTr
           .sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true }))
 
         const extractedPages: ComicPage[] = []
-        const blobsForCache: { name: string; blob: Blob; width: number; height: number; isLandscape: boolean }[] = []
+        const blobsForCache: {
+          name: string
+          blob: Blob
+          width: number
+          height: number
+          isLandscape: boolean
+        }[] = []
 
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i]

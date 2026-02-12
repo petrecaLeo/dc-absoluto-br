@@ -68,9 +68,7 @@
       "uniqueConstraints": {
         "characters_slug_unique": {
           "name": "characters_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "nullsNotDistinct": false
         }
       },
@@ -189,26 +187,18 @@
         "comics_to_characters_comic_id_comics_id_fk": {
           "name": "comics_to_characters_comic_id_comics_id_fk",
           "tableFrom": "comics_to_characters",
-          "columnsFrom": [
-            "comic_id"
-          ],
+          "columnsFrom": ["comic_id"],
           "tableTo": "comics",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "comics_to_characters_character_id_characters_id_fk": {
           "name": "comics_to_characters_character_id_characters_id_fk",
           "tableFrom": "comics_to_characters",
-          "columnsFrom": [
-            "character_id"
-          ],
+          "columnsFrom": ["character_id"],
           "tableTo": "characters",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -257,9 +247,7 @@
       "uniqueConstraints": {
         "newsletter_subscribers_email_unique": {
           "name": "newsletter_subscribers_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "nullsNotDistinct": false
         }
       },

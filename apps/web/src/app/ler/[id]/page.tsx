@@ -1,6 +1,6 @@
 import { ComicReader } from "@/components/comic-reader"
-import type { Comic } from "@dc-absoluto/shared-types"
 import { SERVER_API_URL } from "@/lib/env/server"
+import type { Comic } from "@dc-absoluto/shared-types"
 
 interface ComicResponse {
   data: Comic | null

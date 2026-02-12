@@ -1,7 +1,13 @@
 import { and, desc, eq, isNotNull, lte, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db, isDbAvailable } from "../db"
-import { characters, comics as comicsTable, comicsToCharacters, userReadComics, users } from "../db/schema"
+import {
+  characters,
+  comics as comicsTable,
+  comicsToCharacters,
+  userReadComics,
+  users,
+} from "../db/schema"
 import { getAuthUserFromRequest } from "../utils/auth"
 
 const normalizeText = (value?: string | null) => value?.trim() || undefined
@@ -112,7 +118,9 @@ export const comics = new Elysia({ prefix: "/comics" })
         return { data: createdComic }
       } catch (error) {
         const errorCode =
-          typeof error === "object" && error && "code" in error ? (error as { code?: string }).code : null
+          typeof error === "object" && error && "code" in error
+            ? (error as { code?: string }).code
+            : null
 
         if (errorCode === "23505") {
           set.status = 409

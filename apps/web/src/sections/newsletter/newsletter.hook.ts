@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { useCallback, useEffect, useState } from "react"
 
 const API_URL = PUBLIC_API_URL
 
@@ -38,9 +38,7 @@ export function useNewsletter({ prefilledEmail }: UseNewsletterOptions = {}) {
 
       try {
         const params = new URLSearchParams({ email: prefilledEmail })
-        const response = await fetch(
-          `${API_URL}/api/newsletter/subscription?${params.toString()}`,
-        )
+        const response = await fetch(`${API_URL}/api/newsletter/subscription?${params.toString()}`)
         const data = await response.json()
 
         if (response.ok && isActive) {

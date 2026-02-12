@@ -32,11 +32,7 @@ export function NewsletterModal({
     isAlreadySubscribed,
     handleSubmit,
     reset,
-  } = useNewsletterModal(
-    characterId,
-    prefilledEmail,
-    isOpen,
-  )
+  } = useNewsletterModal(characterId, prefilledEmail, isOpen)
   const titleId = useId()
   const descriptionId = useId()
   const emailId = useId()
@@ -122,7 +118,10 @@ export function NewsletterModal({
               </span>
             </div>
 
-            <h3 id={titleId} className="mb-2 text-2xl font-black uppercase tracking-wide text-white">
+            <h3
+              id={titleId}
+              className="mb-2 text-2xl font-black uppercase tracking-wide text-white"
+            >
               Receba novidades
             </h3>
             <p id={descriptionId} className="mb-6 text-sm leading-relaxed text-gray-400">

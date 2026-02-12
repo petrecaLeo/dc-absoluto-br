@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
 
 import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
 import { SERVER_API_URL } from "@/lib/env/server"
@@ -20,10 +20,7 @@ export async function POST(request: Request) {
   try {
     payload = await request.json()
   } catch {
-    return NextResponse.json(
-      { success: false, message: "Payload inválido." },
-      { status: 400 },
-    )
+    return NextResponse.json({ success: false, message: "Payload inválido." }, { status: 400 })
   }
 
   try {

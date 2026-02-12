@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { axe, fireEvent, render, screen, waitFor } from "@/test/utils"
 import { clearStoredUser, storeUser } from "@/components/header/auth.storage"
+import { axe, fireEvent, render, screen, waitFor } from "@/test/utils"
 
 import Newsletter from "./index"
 

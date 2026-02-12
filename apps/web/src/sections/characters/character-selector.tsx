@@ -4,12 +4,12 @@ import type { Character } from "@dc-absoluto/shared-types"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 
+import { getStoredUser, storeUser, subscribeAuthChanges } from "@/components/header/auth.storage"
+import type { AuthUser } from "@/components/header/auth.types"
+import { LoginModal } from "@/components/header/login-modal"
 import { type CharacterWithImages, useCharacters } from "./characters.hook"
 import { NewsletterModal } from "./newsletter-modal"
 import { ParticleEffect } from "./particle-effect"
-import type { AuthUser } from "@/components/header/auth.types"
-import { getStoredUser, storeUser, subscribeAuthChanges } from "@/components/header/auth.storage"
-import { LoginModal } from "@/components/header/login-modal"
 
 interface CharacterSelectorProps {
   characters: Character[]
@@ -229,9 +229,7 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
         )}
         {selectedCharacter && (
           <span className="sr-only" role="status" aria-live="polite">
-            {isStartingReading
-              ? `Carregando página de leitura de ${selectedCharacter.name}`
-              : null}
+            {isStartingReading ? `Carregando página de leitura de ${selectedCharacter.name}` : null}
           </span>
         )}
       </div>

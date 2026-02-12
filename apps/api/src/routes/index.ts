@@ -1,7 +1,7 @@
 import { Elysia } from "elysia"
+import { auth } from "./auth"
 import { characters } from "./characters"
 import { comics } from "./comics"
-import { auth } from "./auth"
 import { newsletter } from "./newsletter"
 import { proxy } from "./proxy"
 import { report } from "./report"

@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react"
 
 import { UserAvatar } from "@/components/user-avatar"
 
-import type { AuthUser } from "./auth.types"
 import { clearStoredUser, getStoredUser, storeUser, subscribeAuthChanges } from "./auth.storage"
+import type { AuthUser } from "./auth.types"
 import { useHeader } from "./header.hook"
 import { LoginModal } from "./login-modal"
 

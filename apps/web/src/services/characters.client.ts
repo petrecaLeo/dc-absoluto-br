@@ -1,5 +1,5 @@
-import type { Character, Comic } from "@dc-absoluto/shared-types"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import type { Character, Comic } from "@dc-absoluto/shared-types"
 
 export interface CharactersResponse {
   data: Character[]

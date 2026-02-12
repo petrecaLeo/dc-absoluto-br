@@ -22,9 +22,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
-import { readingProgress, type ReadingProgress } from "@/services/reading-progress"
-import { useComicsFilter } from "./use-comics-filter"
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { type ReadingProgress, readingProgress } from "@/services/reading-progress"
+import { useComicsFilter } from "./use-comics-filter"
 
 interface CharacterPageContentProps {
   slug: string
@@ -649,10 +649,7 @@ function ComicCard({
           <div className="mt-auto flex flex-col gap-2 pt-3">
             {canManageRead &&
               (isRead ? (
-                <p
-                  className="text-xs font-semibold"
-                  style={{ color: theme.accentColor }}
-                >
+                <p className="text-xs font-semibold" style={{ color: theme.accentColor }}>
                   Lido em: {readDateLabel || "--/--/----"}
                 </p>
               ) : (
