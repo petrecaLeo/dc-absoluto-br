@@ -1,15 +1,17 @@
 "use client"
 
+import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 
 import { getReadComicsCount } from "@/services/read-comics.client"
 
 const LEVELS = [
-  { key: "bronze", label: "Bronze", min: 10 },
-  { key: "prata", label: "Prata", min: 30 },
-  { key: "ouro", label: "Ouro", min: 50 },
-  { key: "diamante", label: "Diamante", min: 70 },
-  { key: "absoluto", label: "Absoluto", min: 100 },
+  { key: "bronze", label: "Bronze", min: 10, image: "/images/levels/bronze.png" },
+  { key: "prata", label: "Prata", min: 30, image: "/images/levels/silver.png" },
+  { key: "ouro", label: "Ouro", min: 50, image: "/images/levels/gold.png" },
+  { key: "diamante", label: "Diamante", min: 70, image: "/images/levels/diamond.png" },
+  { key: "kryptonita", label: "Kryptonita", min: 100, image: "/images/levels/kryptonite.png" },
+  { key: "absoluto", label: "Absoluto", min: 150, image: "/images/levels/absolute.png" },
 ] as const
 
 type Level = (typeof LEVELS)[number]
@@ -41,6 +43,12 @@ const LEVEL_STYLES: Record<
     dot: "bg-purple-500",
     text: "text-purple-100",
     border: "border-purple-500/60",
+  },
+  kryptonita: {
+    card: "border-green-500/60 bg-green-900/40",
+    dot: "bg-green-500",
+    text: "text-green-100",
+    border: "border-green-500/60",
   },
   absoluto: {
     card: "border-red-600/60 bg-red-900/40",
@@ -93,13 +101,22 @@ export function PerfilConquistas() {
         ) : isLoading ? (
           <div className="h-16 w-full animate-pulse rounded-xl border border-white/10 bg-white/10" />
         ) : currentLevel ? (
-          <div className={`rounded-xl border px-4 py-3 ${LEVEL_STYLES[currentLevel.key].card}`}>
-            <p
-              className={`text-xs font-semibold uppercase tracking-widest ${LEVEL_STYLES[currentLevel.key].text}`}
-            >
-              {currentLevel.label}
-            </p>
-            <p className="mt-1 text-sm text-white/80">Continue lendo para subir de nível.</p>
+          <div className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${LEVEL_STYLES[currentLevel.key].card}`}>
+            <Image
+              src={currentLevel.image}
+              alt={`Moeda ${currentLevel.label}`}
+              width={48}
+              height={48}
+              className="shrink-0"
+            />
+            <div>
+              <p
+                className={`text-xs font-semibold uppercase tracking-widest ${LEVEL_STYLES[currentLevel.key].text}`}
+              >
+                {currentLevel.label}
+              </p>
+              <p className="mt-1 text-sm text-white/80">Continue lendo para subir de nível.</p>
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
