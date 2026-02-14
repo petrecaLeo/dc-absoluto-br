@@ -4,6 +4,17 @@ export interface ReadComicsCountResponse {
   }
 }
 
+export interface TopCharacter {
+  characterId: string
+  characterName: string
+  count: number
+}
+
+export interface TopCharactersResponse {
+  data: TopCharacter[]
+  userCreatedAt: string | null
+}
+
 export interface ReadComicsByCharacterResponse {
   data: {
     comicId: string
@@ -16,6 +27,16 @@ export async function getReadComicsCount(): Promise<ReadComicsCountResponse> {
 
   if (!response.ok) {
     throw new Error(`Failed to fetch read comics count: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+export async function getTopCharacters(): Promise<TopCharactersResponse> {
+  const response = await fetch("/api/comics/read/top-characters", { cache: "no-store" })
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch top characters: ${response.status}`)
   }
 
   return response.json()

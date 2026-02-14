@@ -5,6 +5,7 @@ import { comics } from "./comics"
 import { newsletter } from "./newsletter"
 import { proxy } from "./proxy"
 import { report } from "./report"
+import { usersRoute } from "./users"
 
 export const routes = new Elysia({ prefix: "/api" })
   .use(comics)
@@ -13,3 +14,4 @@ export const routes = new Elysia({ prefix: "/api" })
   .use(newsletter)
   .use(proxy)
   .use(report)
+  .use(usersRoute)

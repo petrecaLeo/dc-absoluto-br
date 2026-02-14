@@ -178,6 +178,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           name: user.name,
           email: user.email,
           profileImage: user.profileImage ?? null,
+          createdAt: user.createdAt.toISOString(),
         },
       }
     },
@@ -302,6 +303,7 @@ export const auth = new Elysia({ prefix: "/auth" })
             name: user.name,
             email: user.email,
             profileImage,
+            createdAt: user.createdAt.toISOString(),
           },
         }
       } catch (error) {
@@ -366,6 +368,7 @@ export const auth = new Elysia({ prefix: "/auth" })
             name,
             email: user.email,
             profileImage: user.profileImage,
+            createdAt: user.createdAt.toISOString(),
           },
         }
       } catch (error) {

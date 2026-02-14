@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lte, sql } from "drizzle-orm"
+import { and, desc, count as drizzleCount, eq, isNotNull, lte, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db, isDbAvailable } from "../db"
 import {
@@ -169,6 +169,53 @@ export const comics = new Elysia({ prefix: "/comics" })
     }
 
     return { data: latestComic[0] }
+  })
+  .get("/read/top-characters", async ({ set, request }) => {
+    set.headers["Cache-Control"] = "private, max-age=300"
+
+    if (!isDbAvailable) {
+      set.status = 503
+      return { data: [], userCreatedAt: null, message: "Banco indisponível" }
+    }
+
+    const authUser = getAuthUserFromRequest(request)
+    if (!authUser) {
+      set.status = 401
+      return { data: [], userCreatedAt: null, message: "Usuário não autenticado" }
+    }
+
+    const [dbUser] = await db!
+      .select({ id: users.id, createdAt: users.createdAt })
+      .from(users)
+      .where(eq(users.email, authUser.email))
+      .limit(1)
+
+    if (!dbUser) {
+      set.status = 401
+      return { data: [], userCreatedAt: null, message: "Usuário não autenticado" }
+    }
+
+    const results = await db!
+      .select({
+        characterId: comicsToCharacters.characterId,
+        characterName: characters.name,
+        count: drizzleCount(),
+      })
+      .from(userReadComics)
+      .innerJoin(comicsToCharacters, eq(userReadComics.comicId, comicsToCharacters.comicId))
+      .innerJoin(characters, eq(comicsToCharacters.characterId, characters.id))
+      .where(eq(userReadComics.userId, dbUser.id))
+      .groupBy(comicsToCharacters.characterId, characters.name)
+      .orderBy(desc(drizzleCount()))
+
+    return {
+      data: results.map((row) => ({
+        characterId: row.characterId,
+        characterName: row.characterName,
+        count: Number(row.count),
+      })),
+      userCreatedAt: dbUser.createdAt.toISOString(),
+    }
   })
   .get("/read/count", async ({ set, request }) => {
     set.headers["Cache-Control"] = "private, max-age=0, no-store"

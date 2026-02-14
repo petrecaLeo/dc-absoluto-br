@@ -6,7 +6,7 @@ const isNonEmptyString = (value: unknown): value is string =>
 export function parseAuthUser(input: unknown): AuthUser | null {
   if (!input || typeof input !== "object") return null
 
-  const { id, name, email, profileImage } = input as Record<string, unknown>
+  const { id, name, email, profileImage, createdAt } = input as Record<string, unknown>
 
   if (!isNonEmptyString(id) || !isNonEmptyString(name) || !isNonEmptyString(email)) {
     return null
@@ -21,5 +21,6 @@ export function parseAuthUser(input: unknown): AuthUser | null {
     name,
     email,
     profileImage: isNonEmptyString(profileImage) ? profileImage.trim() : null,
+    createdAt: isNonEmptyString(createdAt) ? createdAt : null,
   }
 }

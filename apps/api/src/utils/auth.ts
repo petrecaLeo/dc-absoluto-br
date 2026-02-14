@@ -5,6 +5,7 @@ export interface AuthUser {
   name: string
   email: string
   profileImage?: string | null
+  createdAt?: string | null
 }
 
 function parseCookieHeader(header: string): Record<string, string> {
