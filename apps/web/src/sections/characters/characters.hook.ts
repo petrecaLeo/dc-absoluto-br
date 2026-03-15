@@ -2,7 +2,7 @@
 
 import type { Character } from "@dc-absoluto/shared-types"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { type CharacterImages, getCharacterImages } from "@/constants/character-images"
 
@@ -27,40 +27,6 @@ export function useCharacters(characters: Character[] | null) {
   const selectedCharacter = useMemo(() => {
     return charactersWithImages[selectedIndex] || null
   }, [charactersWithImages, selectedIndex])
-
-  useEffect(() => {
-    if (!selectedCharacter) return
-    router.prefetch(`/${selectedCharacter.slug}`)
-  }, [router, selectedCharacter])
-
-  useEffect(() => {
-    if (charactersWithImages.length === 0) return
-
-    let cancelled = false
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-
-    const prefetchInOrder = () => {
-      let index = 0
-
-      const prefetchNext = () => {
-        if (cancelled || index >= charactersWithImages.length) return
-        const character = charactersWithImages[index]
-        if (!character) return
-        router.prefetch(`/${character.slug}`)
-        index += 1
-        timeoutId = setTimeout(prefetchNext, 100)
-      }
-
-      prefetchNext()
-    }
-
-    timeoutId = setTimeout(prefetchInOrder, 100)
-
-    return () => {
-      cancelled = true
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [charactersWithImages, router])
 
   const handleSelectCharacter = useCallback((index: number) => {
     setSelectedIndex(index)

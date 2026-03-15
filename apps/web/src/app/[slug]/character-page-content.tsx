@@ -1,5 +1,7 @@
 "use client"
 
+import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
+import { subscribeAuthChanges } from "@/components/header/auth.storage"
 import type { AuthUser } from "@/components/header/auth.types"
 import type { CharacterImages } from "@/constants/character-images"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
@@ -23,6 +25,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { getReadComicsByCharacter } from "@/services/read-comics.client"
 import { type ReadingProgress, readingProgress } from "@/services/reading-progress"
 import { useComicsFilter } from "./use-comics-filter"
 
@@ -89,6 +92,17 @@ function getLatestComic(comics: Comic[]): Comic | null {
     if (!latest.releaseDate) return comic
     return new Date(comic.releaseDate) > new Date(latest.releaseDate) ? comic : latest
   })
+}
+
+function getClientAuthUser() {
+  if (typeof document === "undefined") return null
+
+  const authCookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${AUTH_COOKIE_KEY}=`))
+    ?.slice(AUTH_COOKIE_KEY.length + 1)
+
+  return decodeAuthCookie(authCookie)
 }
 
 export function CharacterPageContent({
@@ -250,10 +264,26 @@ function ComicsGrid({
     setSortOrder,
     setEditionFilter,
   } = useComicsFilter(comics)
+  const [authUserState, setAuthUserState] = useState<AuthUser | null>(() => {
+    if (typeof window === "undefined") return authUser
+    return getClientAuthUser()
+  })
   const [readingProgressMap, setReadingProgressMap] = useState<Record<string, ReadingProgress>>({})
-  const [readComicsState, setReadComicsState] = useState<ReadComicEntry[]>(() => readComics)
+  const [readComicsState, setReadComicsState] = useState<ReadComicEntry[]>(() =>
+    authUserState && authUser && authUserState.id === authUser.id ? readComics : [],
+  )
   const [readingFilter, setReadingFilter] = useState<"read" | "unread" | null>(null)
   const didInitialProgressLoad = useRef(false)
+
+  useEffect(() => {
+    setAuthUserState(getClientAuthUser())
+
+    const unsubscribe = subscribeAuthChanges((user) => {
+      setAuthUserState(user)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   const refreshReadingProgress = useCallback(() => {
     const nextMap: Record<string, ReadingProgress> = {}
@@ -297,9 +327,57 @@ function ComicsGrid({
     }
   }, [refreshReadingProgress])
 
+  useEffect(() => {
+    if (!authUserState) {
+      setReadComicsState([])
+      return
+    }
+
+    if (authUser && authUserState.id === authUser.id) {
+      setReadComicsState(readComics)
+      return
+    }
+
+    setReadComicsState([])
+  }, [authUser, authUserState, readComics])
+
+  useEffect(() => {
+    if (!authUserState) {
+      setReadingFilter(null)
+      return
+    }
+
+    let cancelled = false
+
+    const syncReadComics = async () => {
+      try {
+        const response = await getReadComicsByCharacter(slug)
+        if (!cancelled) {
+          setReadComicsState(response.data ?? [])
+        }
+      } catch {
+        if (!cancelled) {
+          setReadComicsState([])
+        }
+      }
+    }
+
+    void syncReadComics()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authUserState, slug])
+
+  useEffect(() => {
+    if (!authUserState || readComicsState.length === 0) {
+      setReadingFilter(null)
+    }
+  }, [authUserState, readComicsState.length])
+
   const hasReadComics = useMemo(() => {
-    return authUser ? readComicsState.length > 0 : false
-  }, [authUser, readComicsState])
+    return authUserState ? readComicsState.length > 0 : false
+  }, [authUserState, readComicsState])
 
   const readComicIds = useMemo(
     () => readComicsState.map((entry) => entry.comicId),
@@ -313,7 +391,7 @@ function ComicsGrid({
 
   const handleMarkComicRead = useCallback(
     async (comicId: string) => {
-      if (!authUser) return false
+      if (!authUserState) return false
 
       try {
         const response = await fetch(`/api/comics/${comicId}/read`, {
@@ -333,18 +411,18 @@ function ComicsGrid({
         return false
       }
     },
-    [authUser, slug],
+    [authUserState],
   )
 
   const visibleComics = useMemo(() => {
-    if (!authUser || !readingFilter || !hasReadComics) return sortedComics
+    if (!authUserState || !readingFilter || !hasReadComics) return sortedComics
 
     return sortedComics.filter((comic) => {
       const readStatus = readComicIdsSet.has(comic.id)
 
       return readingFilter === "read" ? readStatus : !readStatus
     })
-  }, [authUser, hasReadComics, readComicIdsSet, readingFilter, sortedComics])
+  }, [authUserState, hasReadComics, readComicIdsSet, readingFilter, sortedComics])
 
   return (
     <section className="mt-6 px-4 pb-6 sm:px-6">
@@ -390,7 +468,7 @@ function ComicsGrid({
               </div>
             </div>
           )}
-          {authUser && hasReadComics && (
+          {authUserState && hasReadComics && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <span className="text-sm font-medium text-white/70">Status de leitura:</span>
               <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
@@ -419,8 +497,8 @@ function ComicsGrid({
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {visibleComics.map((comic, index) => {
             const progress = readingProgressMap[comic.id] ?? null
-            const isOwnedProgress = isProgressForUser(progress, authUser)
-            const isRead = Boolean(authUser && readComicIdsSet.has(comic.id))
+            const isOwnedProgress = isProgressForUser(progress, authUserState)
+            const isRead = Boolean(authUserState && readComicIdsSet.has(comic.id))
             const readAt = readComicDates.get(comic.id)
 
             return (
@@ -433,7 +511,7 @@ function ComicsGrid({
                 hasReadingInProgress={isOwnedProgress && hasReadingInProgress(progress)}
                 isRead={isRead}
                 readAt={readAt}
-                canManageRead={Boolean(authUser)}
+                canManageRead={Boolean(authUserState)}
                 onMarkRead={handleMarkComicRead}
                 index={index}
                 apiUrl={apiUrl}
