@@ -294,7 +294,7 @@ export function ComicReader({
             <h1 className="text-2xl font-bold text-white uppercase">{comicTitle}</h1>
             <p className="mt-2 text-sm text-white/40">
               {loadingState === "loading"
-                ? "Preparando HQ..."
+                ? "Preparando HQ, isso pode demorar um pouco..."
                 : loadingState === "extracting"
                   ? "Extraindo páginas..."
                   : "Finalizando..."}
