@@ -1,3 +1,5 @@
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
+
 export interface ReadComicsCountResponse {
   data: {
     count: number
@@ -22,8 +24,17 @@ export interface ReadComicsByCharacterResponse {
   }[]
 }
 
-export async function getReadComicsCount(): Promise<ReadComicsCountResponse> {
-  const response = await fetch("/api/comics/read/count", { cache: "no-store" })
+export async function getReadComicsCount(
+  universe: string = DEFAULT_COMIC_UNIVERSE,
+): Promise<ReadComicsCountResponse> {
+  const searchParams = new URLSearchParams()
+  if (universe) {
+    searchParams.set("universe", universe)
+  }
+
+  const response = await fetch(`/api/comics/read/count?${searchParams.toString()}`, {
+    cache: "no-store",
+  })
 
   if (!response.ok) {
     throw new Error(`Failed to fetch read comics count: ${response.status}`)

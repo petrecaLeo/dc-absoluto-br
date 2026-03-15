@@ -21,4 +21,4 @@ WORKDIR /app/apps/api
 
 EXPOSE 3001
 
-CMD ["bun", "run", "--watch", "src/index.ts"]
+CMD ["sh", "-lc", "pnpm db:migrate && bun run --watch src/index.ts"]

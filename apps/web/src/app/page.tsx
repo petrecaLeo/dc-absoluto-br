@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
 
 import { SERVER_API_URL } from "@/lib/env/server"
 import type { LatestComic } from "@/sections/home/latest-launch"
@@ -15,9 +16,12 @@ const LATEST_COMIC_REVALIDATE_SECONDS = 60 * 60 * 24
 
 async function getLatestComic(): Promise<LatestComic | null> {
   try {
-    const response = await fetch(`${API_URL}/api/comics/latest`, {
-      next: { revalidate: LATEST_COMIC_REVALIDATE_SECONDS },
-    })
+    const response = await fetch(
+      `${API_URL}/api/comics/latest?universe=${DEFAULT_COMIC_UNIVERSE}`,
+      {
+        next: { revalidate: LATEST_COMIC_REVALIDATE_SECONDS },
+      },
+    )
 
     if (!response.ok) return null
 

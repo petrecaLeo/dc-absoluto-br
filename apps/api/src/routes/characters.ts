@@ -1,5 +1,6 @@
-import { and, asc, eq } from "drizzle-orm"
-import { Elysia } from "elysia"
+import { and, asc, desc, eq } from "drizzle-orm"
+import { Elysia, t } from "elysia"
+import { DEFAULT_COMIC_UNIVERSE, getComicUniverseLabel } from "@dc-absoluto/shared-types"
 import { db, isDbAvailable } from "../db"
 import {
   characters as charactersTable,
@@ -9,6 +10,14 @@ import {
   users,
 } from "../db/schema"
 import { getAuthUserFromRequest } from "../utils/auth"
+
+const UNIVERSE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+const normalizeUniverse = (value?: string | null) => {
+  const trimmed = value?.trim().toLowerCase()
+  if (!trimmed) return undefined
+  return trimmed.replace(/\s+/g, "-")
+}
 
 export const characters = new Elysia({ prefix: "/characters" })
   .get("/", async ({ set }) => {
@@ -72,7 +81,7 @@ export const characters = new Elysia({ prefix: "/characters" })
 
     return { data: readComics.map((row) => ({ comicId: row.comicId, readAt: row.readAt })) }
   })
-  .get("/:slug/comics", async ({ params: { slug }, set }) => {
+  .get("/:slug/universes", async ({ params: { slug }, set }) => {
     if (!isDbAvailable) {
       set.status = 404
       return { data: null, message: "Personagem não encontrado" }
@@ -93,26 +102,131 @@ export const characters = new Elysia({ prefix: "/characters" })
       .selectDistinct({
         id: comics.id,
         title: comics.title,
-        issueNumber: comics.issueNumber,
+        universe: comics.universe,
         coverUrl: comics.coverUrl,
-        downloadUrl: comics.downloadUrl,
         releaseDate: comics.releaseDate,
-        publisher: comics.publisher,
-        writer: comics.writer,
-        artists: comics.artists,
-        createdAt: comics.createdAt,
-        updatedAt: comics.updatedAt,
       })
       .from(comicsToCharacters)
       .innerJoin(comics, eq(comicsToCharacters.comicId, comics.id))
       .where(eq(comicsToCharacters.characterId, character[0].id))
-      .orderBy(asc(comics.releaseDate))
+      .orderBy(desc(comics.releaseDate), asc(comics.title))
+
+    const groupedByUniverse = new Map<
+      string,
+      {
+        universe: string
+        label: string
+        total: number
+        latestComic: {
+          id: string
+          title: string
+          coverUrl: string | null
+          releaseDate: Date | null
+        } | null
+      }
+    >()
+
+    for (const comic of characterComics) {
+      const universe = comic.universe || DEFAULT_COMIC_UNIVERSE
+      const existing = groupedByUniverse.get(universe)
+
+      if (!existing) {
+        groupedByUniverse.set(universe, {
+          universe,
+          label: getComicUniverseLabel(universe),
+          total: 1,
+          latestComic: {
+            id: comic.id,
+            title: comic.title,
+            coverUrl: comic.coverUrl ?? null,
+            releaseDate: comic.releaseDate ?? null,
+          },
+        })
+        continue
+      }
+
+      existing.total += 1
+    }
+
+    const universes = [...groupedByUniverse.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, "en"),
+    )
 
     set.headers["Cache-Control"] = "public, max-age=180, stale-while-revalidate=60"
 
     return {
-      data: characterComics,
+      data: universes,
       character: character[0],
-      total: characterComics.length,
+      total: universes.length,
     }
   })
+  .get(
+    "/:slug/comics",
+    async ({ params: { slug }, query, set }) => {
+      if (!isDbAvailable) {
+        set.status = 404
+        return { data: null, message: "Personagem não encontrado" }
+      }
+
+      const universe = normalizeUniverse(query.universe)
+      if (query.universe && (!universe || !UNIVERSE_SLUG_PATTERN.test(universe))) {
+        set.status = 400
+        return { data: null, message: "Universo inválido" }
+      }
+
+      const character = await db!
+        .select()
+        .from(charactersTable)
+        .where(eq(charactersTable.slug, slug))
+        .limit(1)
+
+      if (character.length === 0) {
+        set.status = 404
+        return { data: null, message: "Personagem não encontrado" }
+      }
+
+      const conditions = [eq(comicsToCharacters.characterId, character[0].id)]
+      if (universe) {
+        conditions.push(eq(comics.universe, universe))
+      }
+
+      const characterComics = await db!
+        .selectDistinct({
+          id: comics.id,
+          title: comics.title,
+          universe: comics.universe,
+          issueNumber: comics.issueNumber,
+          coverUrl: comics.coverUrl,
+          downloadUrl: comics.downloadUrl,
+          releaseDate: comics.releaseDate,
+          publisher: comics.publisher,
+          writer: comics.writer,
+          artists: comics.artists,
+          createdAt: comics.createdAt,
+          updatedAt: comics.updatedAt,
+        })
+        .from(comicsToCharacters)
+        .innerJoin(comics, eq(comicsToCharacters.comicId, comics.id))
+        .where(and(...conditions))
+        .orderBy(asc(comics.releaseDate))
+
+      set.headers["Cache-Control"] = "public, max-age=180, stale-while-revalidate=60"
+
+      return {
+        data: characterComics,
+        character: character[0],
+        universe: universe
+          ? {
+              slug: universe,
+              label: getComicUniverseLabel(universe),
+            }
+          : null,
+        total: characterComics.length,
+      }
+    },
+    {
+      query: t.Object({
+        universe: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
+      }),
+    },
+  )

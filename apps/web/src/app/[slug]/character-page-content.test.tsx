@@ -86,6 +86,7 @@ const character: Character = {
 const comic: Comic = {
   id: "comic-1",
   title: "Batman #1",
+  universe: "absolute",
   issueNumber: 1,
   downloadUrl: "https://example.com/batman-1.cbr",
   releaseDate: new Date("2025-02-01T00:00:00.000Z"),

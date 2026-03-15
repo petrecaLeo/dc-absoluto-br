@@ -83,7 +83,7 @@ export function PerfilCardIdentidade({ initialAuthUser }: PerfilCardIdentidadePr
 
                 <p className="text-sm text-white/70">
                   <span className="font-semibold text-white/90">{count}</span>{" "}
-                  {count === 1 ? "HQ lida" : "HQs lidas"}
+                  {count === 1 ? "HQ lida" : "HQs lidas"} no universo Absolute
                 </p>
 
                 <p className="text-sm text-white/50">

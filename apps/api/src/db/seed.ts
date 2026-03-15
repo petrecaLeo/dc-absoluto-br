@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm"
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
 import { sendNewComicEmail, sendNewsletterNewComicEmail } from "../services/email"
 import { db } from "./index"
 import {
@@ -179,7 +180,10 @@ const batmanComics = [
     downloadUrl:
       "https://drive.google.com/file/d/1YboPHunKXg1ZVcs02d9TP2-HQfel_KYT/view?usp=sharing",
   },
-]
+].map((comic) => ({
+  ...comic,
+  universe: DEFAULT_COMIC_UNIVERSE,
+}))
 
 async function seed() {
   console.log("🌱 Iniciando seed...")

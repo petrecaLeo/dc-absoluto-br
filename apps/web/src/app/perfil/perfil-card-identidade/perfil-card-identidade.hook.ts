@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
 
 import { subscribeAuthChanges } from "@/components/header/auth.storage"
 import type { AuthUser } from "@/components/header/auth.types"
@@ -28,8 +29,8 @@ export function usePerfilCardIdentidade(initialAuthUser: AuthUser) {
   }, [])
 
   const { data: countData, isLoading: isCountLoading } = useQuery({
-    queryKey: ["read-comics-count"],
-    queryFn: getReadComicsCount,
+    queryKey: ["read-comics-count", DEFAULT_COMIC_UNIVERSE],
+    queryFn: () => getReadComicsCount(DEFAULT_COMIC_UNIVERSE),
   })
 
   const { data: topData, isLoading: isTopLoading } = useQuery({

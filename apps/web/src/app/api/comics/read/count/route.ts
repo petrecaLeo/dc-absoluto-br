@@ -4,7 +4,7 @@ import { NextResponse } from "next/server"
 import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
 import { SERVER_API_URL } from "@/lib/env/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   const cookieStore = await cookies()
   const authCookieValue = cookieStore.get(AUTH_COOKIE_KEY)?.value
 
@@ -13,12 +13,24 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(`${SERVER_API_URL}/api/comics/read/count`, {
-      cache: "no-store",
-      headers: {
-        cookie: `${AUTH_COOKIE_KEY}=${authCookieValue}`,
+    const { searchParams } = new URL(request.url)
+    const universe = searchParams.get("universe")
+    const nextSearchParams = new URLSearchParams()
+    if (universe) {
+      nextSearchParams.set("universe", universe)
+    }
+
+    const response = await fetch(
+      `${SERVER_API_URL}/api/comics/read/count${
+        nextSearchParams.size > 0 ? `?${nextSearchParams.toString()}` : ""
+      }`,
+      {
+        cache: "no-store",
+        headers: {
+          cookie: `${AUTH_COOKIE_KEY}=${authCookieValue}`,
+        },
       },
-    })
+    )
 
     if (!response.ok) {
       return NextResponse.json({ data: { count: 0 } }, { status: response.status })

@@ -4,7 +4,12 @@ import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cook
 import { subscribeAuthChanges } from "@/components/header/auth.storage"
 import type { AuthUser } from "@/components/header/auth.types"
 import type { CharacterImages } from "@/constants/character-images"
-import type { Character, Comic } from "@dc-absoluto/shared-types"
+import {
+  DEFAULT_COMIC_UNIVERSE,
+  getComicUniverseLabel,
+  type Character,
+  type Comic,
+} from "@dc-absoluto/shared-types"
 import {
   AlertTriangle,
   ArrowDown,
@@ -31,6 +36,7 @@ import { useComicsFilter } from "./use-comics-filter"
 
 interface CharacterPageContentProps {
   slug: string
+  universe?: string
   character: Character | null
   comics: Comic[]
   total: number
@@ -107,6 +113,7 @@ function getClientAuthUser() {
 
 export function CharacterPageContent({
   slug,
+  universe = DEFAULT_COMIC_UNIVERSE,
   character,
   comics,
   total,
@@ -141,13 +148,14 @@ export function CharacterPageContent({
         {hasError ? (
           <ErrorState slug={slug} />
         ) : character && comics.length === 0 ? (
-          <EmptyState character={character} theme={theme} />
+          <EmptyState character={character} theme={theme} universe={universe} />
         ) : character ? (
           <>
-            <HeroSection character={character} theme={theme} total={total} />
+            <HeroSection character={character} theme={theme} total={total} universe={universe} />
             <ComicsGrid
               comics={comics}
               slug={slug}
+              universe={universe}
               theme={theme}
               latestComic={latestComic}
               apiUrl={apiUrl}
@@ -167,11 +175,16 @@ function HeroSection({
   character,
   theme,
   total,
+  universe,
 }: {
   character: Character
   theme: CharacterImages
   total: number
+  universe: string
 }) {
+  const universeLabel = getComicUniverseLabel(universe)
+  const isAbsoluteUniverse = universe === DEFAULT_COMIC_UNIVERSE
+
   return (
     <section className="relative overflow-hidden py-6 px-4 sm:px-6 lg:py-10">
       <div
@@ -198,15 +211,32 @@ function HeroSection({
 
         <div className="flex items-end gap-6">
           <div className="flex-1">
+            <div
+              className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em]"
+              style={{
+                borderColor: `${theme.accentColor}55`,
+                backgroundColor: `${theme.accentColor}15`,
+                color: theme.accentColor,
+              }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {universeLabel}
+            </div>
             <h1 className="text-5xl font-black uppercase tracking-tight text-white md:text-7xl">
               {character.name}
             </h1>
-            {character.alias && (
+            {isAbsoluteUniverse && character.alias && (
               <p className="mt-2 text-lg italic text-white/60">{character.alias}</p>
             )}
-            {characterSynopsisBySlug[character.slug] && (
+            {isAbsoluteUniverse && characterSynopsisBySlug[character.slug] && (
               <p className="mt-4 max-w-2xl text-sm text-white/70 md:text-base">
                 {characterSynopsisBySlug[character.slug]}
+              </p>
+            )}
+            {!isAbsoluteUniverse && (
+              <p className="mt-4 max-w-2xl text-sm text-white/70 md:text-base">
+                Explore as HQs de {character.name} dentro do universo {universeLabel}. A listagem
+                abaixo mostra apenas as edições dessa linha.
               </p>
             )}
           </div>
@@ -242,6 +272,7 @@ function HeroSection({
 function ComicsGrid({
   comics,
   slug,
+  universe,
   theme,
   latestComic,
   apiUrl,
@@ -250,6 +281,7 @@ function ComicsGrid({
 }: {
   comics: Comic[]
   slug: string
+  universe: string
   theme: CharacterImages
   latestComic: Comic | null
   apiUrl: string
@@ -506,6 +538,7 @@ function ComicsGrid({
                 key={comic.id}
                 comic={comic}
                 slug={slug}
+                universe={universe}
                 theme={theme}
                 isLatest={latestComic?.id === comic.id}
                 hasReadingInProgress={isOwnedProgress && hasReadingInProgress(progress)}
@@ -603,6 +636,7 @@ function FilterButton({
 function ComicCard({
   comic,
   slug,
+  universe,
   theme,
   isLatest,
   hasReadingInProgress,
@@ -615,6 +649,7 @@ function ComicCard({
 }: {
   comic: Comic
   slug: string
+  universe: string
   theme: CharacterImages
   isLatest: boolean
   hasReadingInProgress: boolean
@@ -632,7 +667,7 @@ function ComicCard({
 
   function handleReadOnline() {
     setIsLoading(true)
-    router.push(`/ler/${comic.id}?from=${slug}`)
+    router.push(`/ler/${comic.id}?from=${slug}/${universe}`)
   }
 
   async function handleMarkRead() {
@@ -807,10 +842,14 @@ function formatReadDate(value?: string) {
 function EmptyState({
   character,
   theme,
+  universe,
 }: {
   character: Character
   theme: CharacterImages
+  universe: string
 }) {
+  const universeLabel = getComicUniverseLabel(universe)
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 sm:px-6">
       <div className="relative max-w-md text-center">
@@ -830,8 +869,8 @@ function EmptyState({
 
         <h2 className="text-2xl font-bold text-white">{character.name}</h2>
         <p className="mt-3 text-white/50 leading-relaxed">
-          Nenhuma HQ encontrada para este personagem ainda. Novas edições são adicionadas
-          regularmente, volte em breve!
+          Nenhuma HQ encontrada para este personagem no universo {universeLabel} ainda. Novas
+          edições são adicionadas regularmente, volte em breve!
         </p>
 
         <Link

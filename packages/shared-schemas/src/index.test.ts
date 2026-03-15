@@ -14,6 +14,7 @@ describe("Comic schemas", () => {
       const comic = {
         id: "123e4567-e89b-12d3-a456-426614174000",
         title: "Absolute Batman #1",
+        universe: "absolute",
         titleOriginal: "Absolute Batman #1",
         issueNumber: 1,
         description: "A new take on Batman",
@@ -32,6 +33,7 @@ describe("Comic schemas", () => {
       const comic = {
         id: "invalid-uuid",
         title: "Test",
+        universe: "absolute",
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -44,6 +46,7 @@ describe("Comic schemas", () => {
     it("validates comic creation without id", () => {
       const input = {
         title: "Absolute Superman #1",
+        universe: "absolute",
         issueNumber: 1,
       }
 

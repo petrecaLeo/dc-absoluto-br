@@ -1,6 +1,7 @@
 export interface Comic {
   id: string
   title: string
+  universe: string
   issueNumber?: number
   coverUrl?: string
   downloadUrl?: string
@@ -53,3 +54,9 @@ export interface PaginatedResponse<T> {
 
 export { PROFILE_IMAGE_OPTIONS } from "./profile-images"
 export type { ProfileImageId, ProfileImageOption } from "./profile-images"
+export {
+  COMIC_UNIVERSE_LABELS,
+  DEFAULT_COMIC_UNIVERSE,
+  getComicUniverseLabel,
+} from "./universes"
+export type { CharacterUniverseSummary, UniversePreviewComic } from "./universes"

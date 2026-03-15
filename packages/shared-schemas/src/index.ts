@@ -1,8 +1,11 @@
 import { z } from "zod"
 
+const DEFAULT_COMIC_UNIVERSE = "absolute"
+
 export const comicSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1).max(255),
+  universe: z.string().min(1).max(100).default(DEFAULT_COMIC_UNIVERSE),
   titleOriginal: z.string().max(255).optional(),
   issueNumber: z.number().int().positive().optional(),
   description: z.string().optional(),

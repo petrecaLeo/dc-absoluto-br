@@ -1,5 +1,6 @@
 import { and, desc, count as drizzleCount, eq, isNotNull, lte, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
 import { db, isDbAvailable } from "../db"
 import {
   characters,
@@ -11,6 +12,15 @@ import {
 import { getAuthUserFromRequest } from "../utils/auth"
 
 const normalizeText = (value?: string | null) => value?.trim() || undefined
+const UNIVERSE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+const normalizeUniverse = (value?: string | null) => {
+  const trimmed = value?.trim().toLowerCase()
+  if (!trimmed) return undefined
+  return trimmed.replace(/\s+/g, "-")
+}
+
+const resolveUniverse = (value?: string | null) => normalizeUniverse(value) ?? DEFAULT_COMIC_UNIVERSE
 
 const parseReleaseDate = (value?: string | null) => {
   if (!value) return undefined
@@ -92,11 +102,18 @@ export const comics = new Elysia({ prefix: "/comics" })
         return { success: false, message: "Título inválido" }
       }
 
+      const universe = resolveUniverse(body.universe)
+      if (!UNIVERSE_SLUG_PATTERN.test(universe)) {
+        set.status = 400
+        return { success: false, message: "Universo inválido" }
+      }
+
       try {
         const [createdComic] = await db!
           .insert(comicsTable)
           .values({
             title: normalizedTitle,
+            universe,
             publisher: normalizeText(body.publisher) ?? "DC Comics",
             issueNumber: body.issueNumber ?? null,
             releaseDate: releaseDate ?? null,
@@ -144,32 +161,52 @@ export const comics = new Elysia({ prefix: "/comics" })
         artists: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
         writter: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
         artisti: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
+        universe: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
         characterId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
-  .get("/latest", async ({ set }) => {
-    set.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=3600"
-    if (!isDbAvailable) {
-      set.status = 404
-      return { data: null, message: "HQ não encontrada" }
-    }
+  .get(
+    "/latest",
+    async ({ query, set }) => {
+      set.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=3600"
+      if (!isDbAvailable) {
+        set.status = 404
+        return { data: null, message: "HQ não encontrada" }
+      }
 
-    const now = new Date()
-    const latestComic = await db!
-      .select()
-      .from(comicsTable)
-      .where(and(isNotNull(comicsTable.releaseDate), lte(comicsTable.releaseDate, now)))
-      .orderBy(desc(comicsTable.releaseDate))
-      .limit(1)
+      const universe = normalizeUniverse(query.universe)
+      if (query.universe && (!universe || !UNIVERSE_SLUG_PATTERN.test(universe))) {
+        set.status = 400
+        return { data: null, message: "Universo inválido" }
+      }
 
-    if (latestComic.length === 0) {
-      set.status = 404
-      return { data: null, message: "HQ não encontrada" }
-    }
+      const now = new Date()
+      const conditions = [isNotNull(comicsTable.releaseDate), lte(comicsTable.releaseDate, now)]
+      if (universe) {
+        conditions.push(eq(comicsTable.universe, universe))
+      }
 
-    return { data: latestComic[0] }
-  })
+      const latestComic = await db!
+        .select()
+        .from(comicsTable)
+        .where(and(...conditions))
+        .orderBy(desc(comicsTable.releaseDate))
+        .limit(1)
+
+      if (latestComic.length === 0) {
+        set.status = 404
+        return { data: null, message: "HQ não encontrada" }
+      }
+
+      return { data: latestComic[0] }
+    },
+    {
+      query: t.Object({
+        universe: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
+      }),
+    },
+  )
   .get("/read/top-characters", async ({ set, request }) => {
     set.headers["Cache-Control"] = "private, max-age=300"
 
@@ -217,38 +254,58 @@ export const comics = new Elysia({ prefix: "/comics" })
       userCreatedAt: dbUser.createdAt.toISOString(),
     }
   })
-  .get("/read/count", async ({ set, request }) => {
-    set.headers["Cache-Control"] = "private, max-age=0, no-store"
+  .get(
+    "/read/count",
+    async ({ query, set, request }) => {
+      set.headers["Cache-Control"] = "private, max-age=0, no-store"
 
-    if (!isDbAvailable) {
-      set.status = 503
-      return { data: { count: 0 }, message: "Banco indisponível" }
-    }
+      if (!isDbAvailable) {
+        set.status = 503
+        return { data: { count: 0 }, message: "Banco indisponível" }
+      }
 
-    const authUser = getAuthUserFromRequest(request)
-    if (!authUser) {
-      set.status = 401
-      return { data: { count: 0 }, message: "Usuário não autenticado" }
-    }
+      const universe = normalizeUniverse(query.universe)
+      if (query.universe && (!universe || !UNIVERSE_SLUG_PATTERN.test(universe))) {
+        set.status = 400
+        return { data: { count: 0 }, message: "Universo inválido" }
+      }
 
-    const [dbUser] = await db!
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, authUser.email))
-      .limit(1)
+      const authUser = getAuthUserFromRequest(request)
+      if (!authUser) {
+        set.status = 401
+        return { data: { count: 0 }, message: "Usuário não autenticado" }
+      }
 
-    if (!dbUser) {
-      set.status = 401
-      return { data: { count: 0 }, message: "Usuário não autenticado" }
-    }
+      const [dbUser] = await db!
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, authUser.email))
+        .limit(1)
 
-    const [result] = await db!
-      .select({ count: sql<number>`count(*)` })
-      .from(userReadComics)
-      .where(eq(userReadComics.userId, dbUser.id))
+      if (!dbUser) {
+        set.status = 401
+        return { data: { count: 0 }, message: "Usuário não autenticado" }
+      }
 
-    return { data: { count: Number(result?.count ?? 0) } }
-  })
+      const conditions = [eq(userReadComics.userId, dbUser.id)]
+      if (universe) {
+        conditions.push(eq(comicsTable.universe, universe))
+      }
+
+      const [result] = await db!
+        .select({ count: sql<number>`count(*)` })
+        .from(userReadComics)
+        .innerJoin(comicsTable, eq(userReadComics.comicId, comicsTable.id))
+        .where(and(...conditions))
+
+      return { data: { count: Number(result?.count ?? 0) } }
+    },
+    {
+      query: t.Object({
+        universe: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
+      }),
+    },
+  )
   .get("/:id", async ({ params: { id }, set }) => {
     if (!isDbAvailable) {
       set.status = 404

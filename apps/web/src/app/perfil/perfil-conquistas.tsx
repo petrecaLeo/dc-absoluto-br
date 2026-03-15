@@ -2,14 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Image from "next/image"
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
 
 import { LEVELS, LEVEL_STYLES, getCurrentLevel } from "@/lib/levels"
 import { getReadComicsCount } from "@/services/read-comics.client"
 
 export function PerfilConquistas() {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["read-comics-count"],
-    queryFn: getReadComicsCount,
+    queryKey: ["read-comics-count", DEFAULT_COMIC_UNIVERSE],
+    queryFn: () => getReadComicsCount(DEFAULT_COMIC_UNIVERSE),
   })
 
   const count = data?.data?.count ?? 0
@@ -23,11 +24,14 @@ export function PerfilConquistas() {
             Conquistas
           </p>
           <h2 className="mt-2 text-xl font-semibold text-white">Nível atual</h2>
+          <p className="mt-1 text-sm text-white/[0.55]">
+            Progressão baseada nas leituras de Absolute.
+          </p>
         </div>
         <div className="text-sm text-white">
           {isLoading
             ? "Carregando..."
-            : `${count} ${count === 1 ? "HQ" : "HQs"} lida${count === 1 ? "" : "s"}`}
+            : `${count} ${count === 1 ? "HQ" : "HQs"} lida${count === 1 ? "" : "s"} em Absolute`}
         </div>
       </div>
 

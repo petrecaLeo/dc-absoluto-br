@@ -9,12 +9,14 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core"
+import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
 
 export const comics = pgTable(
   "comics",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: varchar("title", { length: 255 }).notNull(),
+    universe: varchar("universe", { length: 100 }).default(DEFAULT_COMIC_UNIVERSE).notNull(),
     issueNumber: real("issue_number"),
     coverUrl: varchar("cover_url", { length: 500 }),
     downloadUrl: varchar("download_url", { length: 500 }),
@@ -25,7 +27,13 @@ export const comics = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [unique("comics_title_issue_number_unique").on(table.title, table.issueNumber)],
+  (table) => [
+    unique("comics_title_issue_number_universe_unique").on(
+      table.title,
+      table.issueNumber,
+      table.universe,
+    ),
+  ],
 )
 
 export const characters = pgTable("characters", {

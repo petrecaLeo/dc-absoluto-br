@@ -59,5 +59,56 @@ describe("Characters endpoints", () => {
         expect(body).toHaveProperty("total")
       }
     })
+
+    it("supports filtering comics by universe", async () => {
+      const charactersResponse = await app.handle(new Request("http://localhost/api/characters"))
+      const charactersBody = await charactersResponse.json()
+
+      if (charactersBody.data.length > 0) {
+        const characterSlug = charactersBody.data[0].slug
+        const response = await app.handle(
+          new Request(`http://localhost/api/characters/${characterSlug}/comics?universe=absolute`),
+        )
+        const body = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(Array.isArray(body.data)).toBe(true)
+
+        if (body.data.length > 0) {
+          expect(body.data[0]).toHaveProperty("universe")
+          expect(body.data[0].universe).toBe("absolute")
+        }
+      }
+    })
+  })
+
+  describe("GET /api/characters/:slug/universes", () => {
+    it("returns 404 for non-existent character", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/api/characters/personagem-inexistente/universes"),
+      )
+      const body = await response.json()
+
+      expect(response.status).toBe(404)
+      expect(body.message).toBe("Personagem não encontrado")
+    })
+
+    it("returns available universes for an existing character", async () => {
+      const charactersResponse = await app.handle(new Request("http://localhost/api/characters"))
+      const charactersBody = await charactersResponse.json()
+
+      if (charactersBody.data.length > 0) {
+        const characterSlug = charactersBody.data[0].slug
+        const response = await app.handle(
+          new Request(`http://localhost/api/characters/${characterSlug}/universes`),
+        )
+        const body = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(Array.isArray(body.data)).toBe(true)
+        expect(body).toHaveProperty("character")
+        expect(body).toHaveProperty("total")
+      }
+    })
   })
 })
