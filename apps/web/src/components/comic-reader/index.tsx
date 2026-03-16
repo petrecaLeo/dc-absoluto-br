@@ -305,7 +305,7 @@ export function ComicReader({
             {isEarthOneUniverse && (
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/65">
                 As HQs do universo Terra Um costumam ser bem extensas, com cerca de 140 páginas.
-                Por isso o carregamento pode demorar bastante, com média de 6 minutos, mas
+                Por isso o carregamento pode demorar bastante (até 5 minutos), mas
                 fica tranquilo: isso é normal e sua HQ já já vai aparecer!
               </p>
             )}
