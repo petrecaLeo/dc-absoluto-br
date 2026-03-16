@@ -64,6 +64,7 @@ export default async function ReaderPage({ params, searchParams }: ReaderPagePro
       comicId={comic.id}
       downloadUrl={comic.downloadUrl}
       comicTitle={comic.title}
+      comicUniverse={comic.universe}
       backUrl={backUrl}
     />
   )

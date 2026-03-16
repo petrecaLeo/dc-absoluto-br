@@ -2,6 +2,8 @@ export const DEFAULT_COMIC_UNIVERSE = "absolute"
 
 export const COMIC_UNIVERSE_LABELS: Record<string, string> = {
   [DEFAULT_COMIC_UNIVERSE]: "Absolute",
+  "earth-one": "Terra Um",
+  "terra-um": "Terra Um",
 }
 
 export interface UniversePreviewComic {

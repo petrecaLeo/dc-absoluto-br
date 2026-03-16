@@ -21,6 +21,7 @@ interface ComicReaderProps {
   comicTitle: string
   backUrl: string
   comicId: string
+  comicUniverse?: string
   disableReadTracking?: boolean
 }
 
@@ -29,6 +30,7 @@ export function ComicReader({
   comicTitle,
   backUrl,
   comicId,
+  comicUniverse,
   disableReadTracking,
 }: ComicReaderProps) {
   const {
@@ -74,6 +76,7 @@ export function ComicReader({
   } = useComicReader({ downloadUrl, comicTitle, comicId, disableReadTracking })
 
   const controlsHidden = isFullscreenActive && !showControls
+  const isEarthOneUniverse = comicUniverse === "earth-one" || comicUniverse === "terra-um"
   const fullscreenButtonTitle = isFullscreenActive ? "Sair da tela cheia (F)" : "Tela cheia (F)"
   const doublePageButtonTitle = isDoublePageMode ? "Página simples (D)" : "Página dupla (D)"
   const imageMaxHeightClass = isPseudoFullscreen
@@ -299,6 +302,13 @@ export function ComicReader({
                   ? "Extraindo páginas..."
                   : "Finalizando..."}
             </p>
+            {isEarthOneUniverse && (
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/65">
+                As HQs do universo Terra Um costumam ser bem extensas, com cerca de 140 páginas.
+                Por isso o carregamento pode demorar bastante, com média de 6 minutos, mas
+                fica tranquilo: isso é normal e sua HQ já já vai aparecer!
+              </p>
+            )}
           </div>
 
           <div className="w-72">
