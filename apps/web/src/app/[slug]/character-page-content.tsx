@@ -5,10 +5,10 @@ import { subscribeAuthChanges } from "@/components/header/auth.storage"
 import type { AuthUser } from "@/components/header/auth.types"
 import type { CharacterImages } from "@/constants/character-images"
 import {
-  DEFAULT_COMIC_UNIVERSE,
-  getComicUniverseLabel,
   type Character,
   type Comic,
+  DEFAULT_COMIC_UNIVERSE,
+  getComicUniverseLabel,
 } from "@dc-absoluto/shared-types"
 import {
   AlertTriangle,
@@ -64,6 +64,22 @@ const characterSynopsisBySlug: Record<string, string> = {
     'O agente do FBI John Jones tem o cérebro infectado por uma consciência alienígena chamada "O Marciano", cuja percepção é incompreensível para a mente humana. Ele precisa lidar com esse novo estado enquanto cumpre seu trabalho, em uma jornada que redefine o próprio herói.',
   "green-lantern":
     "Em uma Terra alternativa, um alienígena desce sobre a cidade de Evergreen, Nevada, e julga seus moradores, entre eles Guy Gardner, Hal Jordan, John Stewart e Jo Mullein. Diante do terror e do custo de reagir, alguém precisa vencer o medo para emergir como herói.",
+}
+
+const characterUniverseSynopsisByKey: Record<string, string[]> = {
+  "green-lantern:geoff-johns": [
+    "Antes de Lanterna Verde: Renascimento, a história do universo dos Lanternas passou por uma das fases mais sombrias e controversas da DC.",
+    "Tudo começa com uma tragédia marcante: a destruição de Coast City, cidade natal de Hal Jordan. Incapaz de lidar com a perda, Hal entra em colapso emocional e tenta usar o poder do anel para reconstruir a cidade — algo que vai contra todas as regras da Tropa dos Lanternas Verdes.",
+    "Esse momento leva a uma queda drástica do personagem. Hal confronta os próprios Lanternas, derrota vários membros da Tropa e chega até Sinestro, seu antigo mentor. Ao absorver uma quantidade imensa de energia dos anéis, ele assume a identidade de Parallax, tornando-se uma ameaça para todo o universo.",
+    "Como consequência, a Tropa dos Lanternas Verdes praticamente deixa de existir.",
+    "É nesse cenário que surge Kyle Rayner, um artista comum escolhido como o último portador do anel. Durante um longo período, Kyle se torna o único Lanterna Verde ativo, carregando sozinho o legado e reconstruindo, aos poucos, o que restou da Tropa.",
+    "E após a união de Kyle e a Liga de Justiça, Hal é, finalmente, derrotado.",
+    'Porém, posteriormente, na saga "The Final Night", o Sol da Terra começa a se apagar, colocando o planeta em risco. Nesse momento, Hal recupera parte de sua consciência e, em um ato de redenção, se sacrifica para reacender o Sol, salvando bilhões de vidas.',
+    "Após sua morte, sua alma não segue um caminho comum. Em vez disso, Hal é escolhido para se tornar o novo hospedeiro do Espectro, o espírito da vingança. Nesse papel, ele passa a julgar almas e buscar redenção pelos seus próprios erros, embora frequentemente demonstrando conflito interno entre justiça e culpa.",
+    "Enquanto isso, o legado dos Lanternas começa lentamente a ser reconstruído. Kyle Rayner, inicialmente o último Lanterna Verde, evolui ao longo dos anos e eventualmente consegue restaurar a Bateria Central de Oa e reacender o poder dos anéis. Esse processo permite o retorno gradual da Tropa dos Lanternas Verdes, trazendo de volta figuras importantes como John Stewart e Guy Gardner ao papel de Lanternas.",
+    "Assim, quando Renascimento começa, o universo já está em reconstrução — a Tropa existe novamente, novos equilíbrios foram formados e Hal Jordan, agora como Espectro, ainda carrega o peso de tudo o que aconteceu.",
+    "Mas apesar dessa aparente estabilidade, algo ainda não está certo.",
+  ],
 }
 
 function isNewComic(releaseDate?: Date) {
@@ -184,6 +200,7 @@ function HeroSection({
 }) {
   const universeLabel = getComicUniverseLabel(universe)
   const isAbsoluteUniverse = universe === DEFAULT_COMIC_UNIVERSE
+  const universeSynopsis = characterUniverseSynopsisByKey[`${character.slug}:${universe}`]
 
   return (
     <section className="relative overflow-hidden py-6 px-4 sm:px-6 lg:py-10">
@@ -233,7 +250,14 @@ function HeroSection({
                 {characterSynopsisBySlug[character.slug]}
               </p>
             )}
-            {!isAbsoluteUniverse && (
+            {!isAbsoluteUniverse && universeSynopsis && (
+              <div className="mt-4 max-w-4xl space-y-4 text-sm text-white/70 md:text-base">
+                {universeSynopsis.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            )}
+            {!isAbsoluteUniverse && !universeSynopsis && (
               <p className="mt-4 max-w-2xl text-sm text-white/70 md:text-base">
                 Explore as HQs de {character.name} dentro do universo {universeLabel}. A listagem
                 abaixo mostra apenas as edições dessa linha.
