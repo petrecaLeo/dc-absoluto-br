@@ -1,4 +1,6 @@
+import { Readable } from "node:stream"
 import { Elysia, t } from "elysia"
+import { File as MegaFile } from "megajs"
 
 const MEDIAFIRE_CACHE_TTL_MS = 10 * 60 * 1000
 
@@ -40,9 +42,41 @@ function isMediaFireUrl(url: string): boolean {
   return hostname === "mediafire.com" || hostname?.endsWith(".mediafire.com") === true
 }
 
+function isMegaUrl(url: string): boolean {
+  const hostname = getHostname(url)
+  return (
+    hostname === "mega.nz" ||
+    hostname === "mega.co.nz" ||
+    hostname?.endsWith(".mega.nz") === true ||
+    hostname?.endsWith(".mega.co.nz") === true
+  )
+}
+
 function isHtmlResponse(response: Response): boolean {
   const contentType = response.headers.get("content-type") || ""
   return contentType.includes("text/html")
+}
+
+function inferContentType(filename: string): string {
+  const normalizedFilename = filename.toLowerCase()
+
+  if (normalizedFilename.endsWith(".cbr")) return "application/x-cbr"
+  if (normalizedFilename.endsWith(".cbz")) return "application/vnd.comicbook+zip"
+  if (normalizedFilename.endsWith(".pdf")) return "application/pdf"
+  if (normalizedFilename.endsWith(".zip")) return "application/zip"
+
+  return "application/octet-stream"
+}
+
+function createAttachmentDisposition(filename: string): string {
+  const fallbackFilename =
+    filename
+      .replaceAll(/[\u0080-\uFFFF]/g, "_")
+      .replaceAll('"', "")
+      .replaceAll("\\", "")
+      .trim() || "download"
+
+  return `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
 }
 
 function extractMediaFireDownloadUrl(html: string, baseUrl: string): string | null {
@@ -173,6 +207,34 @@ async function fetchFromMediaFire(url: string): Promise<Response> {
   return downloadResponse
 }
 
+async function fetchFromMega(url: string): Promise<Response> {
+  const file = MegaFile.fromURL(url)
+
+  if (file.directory) {
+    throw new Error("Pastas do MEGA não são suportadas")
+  }
+
+  await file.loadAttributes()
+
+  const filename = file.name?.trim() || "comic.cbr"
+  const contentType = inferContentType(filename)
+  const headers = new Headers({
+    "cache-control": "public, max-age=3600",
+    "content-disposition": createAttachmentDisposition(filename),
+    "content-type": contentType,
+  })
+
+  if (typeof file.size === "number" && Number.isFinite(file.size)) {
+    headers.set("content-length", String(file.size))
+  }
+
+  const downloadStream = file.download({})
+
+  return new Response(Readable.toWeb(downloadStream as Readable), {
+    headers,
+  })
+}
+
 export const proxy = new Elysia({ prefix: "/proxy" }).get(
   "/download",
   async ({ query, set }) => {
@@ -188,7 +250,9 @@ export const proxy = new Elysia({ prefix: "/proxy" }).get(
         ? await fetchFromGDrive(url)
         : isMediaFireUrl(url)
           ? await fetchFromMediaFire(url)
-          : await fetch(url, { headers: PROXY_HEADERS, redirect: "follow" })
+          : isMegaUrl(url)
+            ? await fetchFromMega(url)
+            : await fetch(url, { headers: PROXY_HEADERS, redirect: "follow" })
 
       if (!response.ok) {
         set.status = response.status

@@ -1,5 +1,33 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test"
-import { createApp } from "../index"
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { Readable } from "node:stream"
+
+interface MockMegaFile {
+  directory: boolean
+  name?: string | null
+  size?: number
+  loadAttributes: () => Promise<unknown>
+  download: () => Readable
+}
+
+const megaFromUrlCalls: string[] = []
+let queuedMegaFiles: MockMegaFile[] = []
+
+mock.module("megajs", () => ({
+  File: {
+    fromURL(url: string): MockMegaFile {
+      megaFromUrlCalls.push(url)
+
+      const file = queuedMegaFiles.shift()
+      if (!file) {
+        throw new Error("Nenhum arquivo MEGA mockado para este teste")
+      }
+
+      return file
+    },
+  },
+}))
+
+const { createApp } = await import("../index")
 
 const originalFetch = globalThis.fetch
 
@@ -17,6 +45,8 @@ describe("Proxy endpoints", () => {
   beforeEach(() => {
     queuedResponses = []
     fetchCalls = []
+    queuedMegaFiles = []
+    megaFromUrlCalls.length = 0
 
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       fetchCalls.push({ url: getRequestUrl(input), init })
@@ -160,5 +190,28 @@ describe("Proxy endpoints", () => {
     expect(fetchCalls.map((call) => call.url)).toEqual([directUrl])
     expect(response.headers.get("content-type")).toBe("application/octet-stream")
     expect(await response.text()).toBe("generic-file")
+  })
+
+  it("resolves MEGA files for online reading and download", async () => {
+    queuedMegaFiles.push({
+      directory: false,
+      name: "absolute-batman.cbr",
+      size: 9,
+      loadAttributes: async () => undefined,
+      download: () => Readable.from(["mega-file"]),
+    })
+
+    const megaUrl = "https://mega.nz/file/abc123#secret-key"
+    const response = await app.handle(
+      new Request(`http://localhost/api/proxy/download?url=${encodeURIComponent(megaUrl)}`),
+    )
+
+    expect(response.status).toBe(200)
+    expect(megaFromUrlCalls).toEqual([megaUrl])
+    expect(fetchCalls).toHaveLength(0)
+    expect(response.headers.get("content-type")).toBe("application/x-cbr")
+    expect(response.headers.get("content-length")).toBe("9")
+    expect(response.headers.get("content-disposition")).toContain('filename="absolute-batman.cbr"')
+    expect(await response.text()).toBe("mega-file")
   })
 })
