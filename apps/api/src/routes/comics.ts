@@ -191,7 +191,7 @@ export const comics = new Elysia({ prefix: "/comics" })
         .select()
         .from(comicsTable)
         .where(and(...conditions))
-        .orderBy(desc(comicsTable.issueNumber))
+        .orderBy(desc(comicsTable.releaseDate))
         .limit(1)
 
       if (latestComic.length === 0) {

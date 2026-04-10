@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTH_COOKIE_KEY, encodeAuthCookie } from "@/components/header/auth.cookie"
 import type { AuthUser } from "@/components/header/auth.types"
-import { render, screen, waitFor } from "@/test/utils"
+import { fireEvent, render, screen, waitFor } from "@/test/utils"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
 
 const authState = vi.hoisted(() => {
@@ -93,6 +93,30 @@ const comic: Comic = {
   createdAt: new Date("2025-02-01T00:00:00.000Z"),
   updatedAt: new Date("2025-02-01T00:00:00.000Z"),
 }
+
+const comicsWithMixedReleaseOrder: Comic[] = [
+  {
+    ...comic,
+    id: "comic-1",
+    title: "Batman #1",
+    issueNumber: 1,
+    releaseDate: new Date("2025-02-01T00:00:00.000Z"),
+  },
+  {
+    ...comic,
+    id: "comic-2",
+    title: "Batman #2",
+    issueNumber: 2,
+    releaseDate: new Date("2025-01-01T00:00:00.000Z"),
+  },
+  {
+    ...comic,
+    id: "comic-3",
+    title: "Batman #3",
+    issueNumber: 3,
+    releaseDate: new Date("2025-03-01T00:00:00.000Z"),
+  },
+]
 
 const theme = {
   image: "/images/batman.jpg",
@@ -210,5 +234,39 @@ describe("CharacterPageContent auth sync", () => {
     })
 
     expect(screen.queryByText("Status de leitura:")).not.toBeInTheDocument()
+  })
+})
+
+describe("CharacterPageContent sorting", () => {
+  it("uses issue number on the initial render and keeps date sorting for explicit actions", () => {
+    act(() => {
+      render(
+        <CharacterPageContent
+          slug="batman"
+          character={character}
+          comics={comicsWithMixedReleaseOrder}
+          total={comicsWithMixedReleaseOrder.length}
+          theme={theme}
+          hasError={false}
+          authUser={null}
+          readComics={[]}
+        />,
+      )
+    })
+
+    const getComicTitles = () =>
+      screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)
+
+    expect(getComicTitles()).toEqual(["Batman #1", "Batman #2", "Batman #3"])
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Mais recente" }))
+    })
+    expect(getComicTitles()).toEqual(["Batman #3", "Batman #1", "Batman #2"])
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Mais antigo" }))
+    })
+    expect(getComicTitles()).toEqual(["Batman #2", "Batman #1", "Batman #3"])
   })
 })
