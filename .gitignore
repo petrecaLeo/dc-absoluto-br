@@ -35,8 +35,9 @@ coverage/
 # Docker
 .docker/
 
-# Claude Code
+# AI Agents
 .claude/
+/codex
 
 # Misc
 *.pem
