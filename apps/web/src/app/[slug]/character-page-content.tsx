@@ -79,12 +79,12 @@ const characterUniverseSynopsisByKey: Record<string, string[]> = {
     "Enquanto isso, o legado dos Lanternas começa lentamente a ser reconstruído. Kyle Rayner, inicialmente o último Lanterna Verde, evolui ao longo dos anos e eventualmente consegue restaurar a Bateria Central de Oa e reacender o poder dos anéis. Esse processo permite o retorno gradual da Tropa dos Lanternas Verdes, trazendo de volta figuras importantes como John Stewart e Guy Gardner ao papel de Lanternas.",
     "Assim, quando Renascimento começa, o universo já está em reconstrução — a Tropa existe novamente, novos equilíbrios foram formados e Hal Jordan, agora como Espectro, ainda carrega o peso de tudo o que aconteceu.",
     "Mas apesar dessa aparente estabilidade, algo ainda não está certo.",
-    "Essa seção inclui os volumes:",
-    "Lanterna Verde: Renascimento #1-6",
-    "Lanterna Verde: Sem Medo #1-6",
-    "Lanterna Verde: A Vingança Dos Lanternas Verdes #7-13",
-    "Lanterna Verde: Hal Jordan: Procurado #14-20",
-    "Lanterna Verde: O Lado Negro Do Verde #1-7",
+    "Essa seção inclui os volumes, já ordenados:",
+    "Lanterna Verde: Renascimento",
+    "Lanterna Verde: Sem Medo",
+    "Lanterna Verde: A Vingança Dos Lanternas Verdes",
+    "Lanterna Verde: Hal Jordan: Procurado",
+    "Lanterna Verde: O Lado Negro Do Verde",
   ],
 }
 
