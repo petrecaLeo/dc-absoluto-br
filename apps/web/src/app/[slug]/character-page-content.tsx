@@ -88,6 +88,8 @@ const characterUniverseSynopsisByKey: Record<string, string[]> = {
   ],
 }
 
+const DEFAULT_VISIBLE_UNIVERSE_SYNOPSIS_ITEMS = 3
+
 function isNewComic(releaseDate?: Date) {
   if (!releaseDate) return false
   const now = new Date()
@@ -257,11 +259,10 @@ function HeroSection({
               </p>
             )}
             {!isAbsoluteUniverse && universeSynopsis && (
-              <div className="mt-4 max-w-4xl space-y-4 text-sm text-white/70 md:text-base">
-                {universeSynopsis.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
+              <UniverseSynopsis
+                key={`${character.slug}:${universe}`}
+                paragraphs={universeSynopsis}
+              />
             )}
             {!isAbsoluteUniverse && !universeSynopsis && (
               <p className="mt-4 max-w-2xl text-sm text-white/70 md:text-base">
@@ -296,6 +297,32 @@ function HeroSection({
         </div>
       </div>
     </section>
+  )
+}
+
+function UniverseSynopsis({ paragraphs }: { paragraphs: string[] }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const visibleParagraphs = isExpanded
+    ? paragraphs
+    : paragraphs.slice(0, DEFAULT_VISIBLE_UNIVERSE_SYNOPSIS_ITEMS)
+  const hasHiddenParagraphs =
+    paragraphs.length > DEFAULT_VISIBLE_UNIVERSE_SYNOPSIS_ITEMS && !isExpanded
+
+  return (
+    <div className="mt-4 max-w-4xl space-y-4 text-sm text-white/70 md:text-base">
+      {visibleParagraphs.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
+      {hasHiddenParagraphs && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          className="text-sm font-medium text-white underline underline-offset-4 transition-opacity hover:opacity-80 md:text-base"
+        >
+          ler mais
+        </button>
+      )}
+    </div>
   )
 }
 
