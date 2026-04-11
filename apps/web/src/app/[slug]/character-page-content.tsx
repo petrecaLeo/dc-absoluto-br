@@ -313,13 +313,14 @@ function UniverseSynopsis({ paragraphs }: { paragraphs: string[] }) {
       {visibleParagraphs.map((paragraph) => (
         <p key={paragraph}>{paragraph}</p>
       ))}
-      {hasHiddenParagraphs && (
+      {paragraphs.length > DEFAULT_VISIBLE_UNIVERSE_SYNOPSIS_ITEMS && (
         <button
           type="button"
-          onClick={() => setIsExpanded(true)}
-          className="text-sm font-medium text-white underline underline-offset-4 transition-opacity hover:opacity-80 md:text-base"
+          onClick={() => setIsExpanded((current) => !current)}
+          aria-expanded={isExpanded}
+          className="cursor-pointer text-sm font-medium text-white underline underline-offset-4 transition-opacity hover:opacity-80 md:text-base"
         >
-          ler mais
+          {hasHiddenParagraphs ? "Ler mais" : "Ler menos"}
         </button>
       )}
     </div>
