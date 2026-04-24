@@ -42,4 +42,3 @@ coverage/
 # Misc
 *.pem
 CLAUDE.md
-api.http
