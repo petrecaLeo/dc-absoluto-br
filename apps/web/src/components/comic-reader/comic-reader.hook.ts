@@ -25,12 +25,26 @@ type LoadingState = "idle" | "loading" | "extracting" | "ready" | "error"
 
 const MIN_ZOOM = 1
 const ZOOM_STEP = 0.25
+const PDF_RENDER_SCALE = 2
 const PRELOAD_AHEAD = 3
 const PRELOAD_BEHIND = 2
 const SCROLL_THRESHOLD = 60
 const SCROLL_COOLDOWN_MS = 250
 const SCROLL_RESET_DELAY_MS = 140
 const READING_COMPLETION_BUFFER = 5
+
+interface ExtractedPageForCache {
+  name: string
+  blob: Blob
+  width: number
+  height: number
+  isLandscape: boolean
+}
+
+interface ExtractedComicPages {
+  pages: ComicPage[]
+  blobsForCache: ExtractedPageForCache[]
+}
 
 function getAuthUserFromCookie() {
   if (typeof document === "undefined") return null
@@ -43,6 +57,192 @@ function getAuthUserFromCookie() {
 
   const value = rawCookie.substring(`${AUTH_COOKIE_KEY}=`.length)
   return decodeAuthCookie(value)
+}
+
+function getUrlPathname(value: string) {
+  try {
+    return new URL(value).pathname.toLowerCase()
+  } catch {
+    return value.toLowerCase()
+  }
+}
+
+function hasPdfSignature(arrayBuffer: ArrayBuffer) {
+  if (arrayBuffer.byteLength < 5) return false
+
+  const header = new Uint8Array(arrayBuffer.slice(0, 5))
+  return (
+    header[0] === 0x25 &&
+    header[1] === 0x50 &&
+    header[2] === 0x44 &&
+    header[3] === 0x46 &&
+    header[4] === 0x2d
+  )
+}
+
+function isPdfFile(response: Response, downloadUrl: string, arrayBuffer: ArrayBuffer) {
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? ""
+  const contentDisposition = response.headers.get("content-disposition")?.toLowerCase() ?? ""
+  const pathname = getUrlPathname(downloadUrl)
+
+  return (
+    contentType.includes("pdf") ||
+    contentDisposition.includes(".pdf") ||
+    pathname.endsWith(".pdf") ||
+    hasPdfSignature(arrayBuffer)
+  )
+}
+
+function getImageDimensions(url: string) {
+  return new Promise<{ width: number; height: number }>((resolve) => {
+    const img = new window.Image()
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = () => resolve({ width: 0, height: 0 })
+    img.src = url
+  })
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob)
+        return
+      }
+
+      reject(new Error("Não foi possível renderizar a página do PDF"))
+    }, "image/png")
+  })
+}
+
+async function extractArchivePages(
+  arrayBuffer: ArrayBuffer,
+  onProgress: (progress: number) => void,
+): Promise<ExtractedComicPages> {
+  const { Archive } = await import("libarchive.js")
+
+  Archive.init({
+    workerUrl: "/libarchive/worker-bundle.js",
+  })
+
+  const archive = await Archive.open(new File([arrayBuffer], "comic.cbr"))
+  const filesArray = await archive.getFilesArray()
+
+  const imageFiles = filesArray
+    .filter((file) => {
+      const name = file.file.name.toLowerCase()
+      return (
+        name.endsWith(".jpg") ||
+        name.endsWith(".jpeg") ||
+        name.endsWith(".png") ||
+        name.endsWith(".webp") ||
+        name.endsWith(".gif")
+      )
+    })
+    .sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true }))
+
+  if (imageFiles.length === 0) {
+    throw new Error("Nenhuma imagem encontrada no arquivo da HQ")
+  }
+
+  const extractedPages: ComicPage[] = []
+  const blobsForCache: ExtractedPageForCache[] = []
+
+  for (let i = 0; i < imageFiles.length; i++) {
+    const file = imageFiles[i]
+    const extractedFile = await file.file.extract()
+    const url = URL.createObjectURL(extractedFile)
+    const dimensions = await getImageDimensions(url)
+
+    const page = {
+      name: file.file.name,
+      url,
+      width: dimensions.width,
+      height: dimensions.height,
+      isLandscape: dimensions.width > dimensions.height,
+    }
+
+    extractedPages.push(page)
+    blobsForCache.push({
+      name: page.name,
+      blob: extractedFile,
+      width: page.width,
+      height: page.height,
+      isLandscape: page.isLandscape,
+    })
+    onProgress(50 + Math.round(((i + 1) / imageFiles.length) * 50))
+  }
+
+  return { pages: extractedPages, blobsForCache }
+}
+
+async function extractPdfPages(
+  arrayBuffer: ArrayBuffer,
+  onProgress: (progress: number) => void,
+): Promise<ExtractedComicPages> {
+  const pdfjs = await import("pdfjs-dist")
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url,
+  ).toString()
+
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
+  const pdf = await loadingTask.promise
+
+  if (pdf.numPages === 0) {
+    await pdf.destroy()
+    throw new Error("PDF sem páginas para leitura")
+  }
+
+  const extractedPages: ComicPage[] = []
+  const blobsForCache: ExtractedPageForCache[] = []
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      const pdfPage = await pdf.getPage(pageNumber)
+      const viewport = pdfPage.getViewport({ scale: PDF_RENDER_SCALE })
+      const canvas = document.createElement("canvas")
+      const context = canvas.getContext("2d")
+
+      if (!context) {
+        throw new Error("Canvas indisponível para renderizar PDF")
+      }
+
+      canvas.width = Math.ceil(viewport.width)
+      canvas.height = Math.ceil(viewport.height)
+
+      await pdfPage.render({
+        canvasContext: context,
+        viewport,
+      }).promise
+
+      const blob = await canvasToBlob(canvas)
+      const url = URL.createObjectURL(blob)
+      const page = {
+        name: `page-${String(pageNumber).padStart(3, "0")}.png`,
+        url,
+        width: canvas.width,
+        height: canvas.height,
+        isLandscape: canvas.width > canvas.height,
+      }
+
+      extractedPages.push(page)
+      blobsForCache.push({
+        name: page.name,
+        blob,
+        width: page.width,
+        height: page.height,
+        isLandscape: page.isLandscape,
+      })
+
+      pdfPage.cleanup()
+      onProgress(50 + Math.round((pageNumber / pdf.numPages) * 50))
+    }
+  } finally {
+    await pdf.destroy()
+  }
+
+  return { pages: extractedPages, blobsForCache }
 }
 
 export function useComicReader({
@@ -741,7 +941,7 @@ export function useComicReader({
           const { done, value } = await reader.read()
           if (done) break
 
-          chunks.push(value.buffer as ArrayBuffer)
+          chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
           received += value.length
 
           if (total > 0) {
@@ -755,75 +955,17 @@ export function useComicReader({
         setLoadingState("extracting")
         setProgress(50)
 
-        const { Archive } = await import("libarchive.js")
+        const extracted = isPdfFile(response, downloadUrl, arrayBuffer)
+          ? await extractPdfPages(arrayBuffer, setProgress)
+          : await extractArchivePages(arrayBuffer, setProgress)
 
-        Archive.init({
-          workerUrl: "/libarchive/worker-bundle.js",
-        })
-
-        const archive = await Archive.open(new File([arrayBuffer], "comic.cbr"))
-        const filesArray = await archive.getFilesArray()
-
-        const imageFiles = filesArray
-          .filter((file) => {
-            const name = file.file.name.toLowerCase()
-            return (
-              name.endsWith(".jpg") ||
-              name.endsWith(".jpeg") ||
-              name.endsWith(".png") ||
-              name.endsWith(".webp") ||
-              name.endsWith(".gif")
-            )
-          })
-          .sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true }))
-
-        const extractedPages: ComicPage[] = []
-        const blobsForCache: {
-          name: string
-          blob: Blob
-          width: number
-          height: number
-          isLandscape: boolean
-        }[] = []
-
-        for (let i = 0; i < imageFiles.length; i++) {
-          const file = imageFiles[i]
-          const extractedFile = await file.file.extract()
-          const url = URL.createObjectURL(extractedFile)
-
-          const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
-            const img = new window.Image()
-            img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
-            img.onerror = () => resolve({ width: 0, height: 0 })
-            img.src = url
-          })
-
-          const page = {
-            name: file.file.name,
-            url,
-            width: dimensions.width,
-            height: dimensions.height,
-            isLandscape: dimensions.width > dimensions.height,
-          }
-
-          extractedPages.push(page)
-          blobsForCache.push({
-            name: page.name,
-            blob: extractedFile,
-            width: page.width,
-            height: page.height,
-            isLandscape: page.isLandscape,
-          })
-          setProgress(50 + Math.round(((i + 1) / imageFiles.length) * 50))
-        }
-
-        setPages(extractedPages)
+        setPages(extracted.pages)
         setLoadingState("ready")
         setProgress(100)
         hasExtractedRef.current = true
 
         if (comicId) {
-          setCachedComic(comicId, blobsForCache).catch(() => {})
+          setCachedComic(comicId, extracted.blobsForCache).catch(() => {})
         }
       } catch (err) {
         console.error("Erro ao extrair HQ:", err)
