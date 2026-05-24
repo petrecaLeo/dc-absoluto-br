@@ -1,5 +1,5 @@
-import { and, eq } from "drizzle-orm"
 import { DEFAULT_COMIC_UNIVERSE } from "@dc-absoluto/shared-types"
+import { and, eq } from "drizzle-orm"
 import { sendNewComicEmail, sendNewsletterNewComicEmail } from "../services/email"
 import { db } from "./index"
 import {
@@ -206,6 +206,13 @@ async function seed() {
         upvotes: 0,
       },
       {
+        slug: "supergirl",
+        name: "Supergirl",
+        alias: "Kara Zor-El",
+        rating: 0,
+        upvotes: 0,
+      },
+      {
         slug: "wonder-woman",
         name: "Mulher Maravilha",
         alias: "Diana",
@@ -216,6 +223,13 @@ async function seed() {
         slug: "green-lantern",
         name: "Lanterna Verde",
         alias: 'Sojourner "Jo" Mullein',
+        rating: 0,
+        upvotes: 0,
+      },
+      {
+        slug: "green-arrow",
+        name: "Arqueiro Verde",
+        alias: "Oliver Queen",
         rating: 0,
         upvotes: 0,
       },

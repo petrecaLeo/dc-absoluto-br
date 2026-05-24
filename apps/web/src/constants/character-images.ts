@@ -21,6 +21,13 @@ export const characterImages: Record<string, CharacterImages> = {
     gradientFrom: "#3b8fd4",
     gradientTo: "#C8102E",
   },
+  supergirl: {
+    image: "/images/characters/supergirl/character.webp",
+    logo: "/images/characters/supergirl/logo.webp",
+    accentColor: "#40c8f5",
+    gradientFrom: "#ee4830",
+    gradientTo: "#fdcd5d",
+  },
   "wonder-woman": {
     image: "/images/characters/wonder-woman/character.webp",
     logo: "/images/characters/wonder-woman/logo.webp",
@@ -34,6 +41,13 @@ export const characterImages: Record<string, CharacterImages> = {
     accentColor: "#00C853",
     gradientFrom: "#1B5E20",
     gradientTo: "#00E676",
+  },
+  "green-arrow": {
+    image: "/images/characters/green-arrow/character.webp",
+    logo: "/images/characters/green-arrow/logo.webp",
+    accentColor: "#286e30",
+    gradientFrom: "#0b1111",
+    gradientTo: "#7A0F14",
   },
   flash: {
     image: "/images/characters/flash/character.webp",

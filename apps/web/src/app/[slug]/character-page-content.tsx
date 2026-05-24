@@ -56,6 +56,8 @@ const characterSynopsisBySlug: Record<string, string> = {
     "Gotham é aterrorizada por uma gangue de mascarados, e um vigilante enfrenta a cidade, mas não é o Batman que conhecemos. Neste universo absoluto, Bruce Wayne é jovem, sem a mansão Wayne e sem grandes fortunas, movido por uma motivação diferente como Cavaleiro das Trevas.",
   superman:
     "Em um mundo mais sombrio, Kal-El cai em um campo remoto do Kansas como o último sobrevivente de Krypton. Ao tentar sobreviver, ele entra em conflito com a corporação Lázaro e seu exército de pacificadores, enquanto o planeta parece repetir os erros de seu mundo destruído.",
+  supergirl:
+    "Vinda do planeta Krypton, Kara Zor-El chegou à Terra após a destruição de seu mundo natal. Prima de Kal-El, o Superman, ela possui os mesmos poderes extraordinários concedidos pelo Sol amarelo da Terra: força sobre-humana, voo, visão de calor e muito mais. Dividida entre sua herança kryptoniana e sua vida entre os humanos, Supergirl busca encontrar seu lugar no mundo enquanto protege inocentes de ameaças terrestres e cósmicas. Corajosa, determinada e inspiradora, Kara enfrenta desafios que testam não apenas seus poderes, mas também sua identidade, seus valores e a esperança que carrega consigo como uma das maiores heroínas do Universo DC.",
   "wonder-woman":
     "Diana foi exilada ao submundo quando bebê e criada pela feiticeira Circe, moldada por tragédia, perigo e magia. Retornando à superfície com armas forjadas no Inferno, sua missão se parece mais com justiça do que paz, enquanto busca seu lugar no mundo.",
   flash:
@@ -64,6 +66,8 @@ const characterSynopsisBySlug: Record<string, string> = {
     'O agente do FBI John Jones tem o cérebro infectado por uma consciência alienígena chamada "O Marciano", cuja percepção é incompreensível para a mente humana. Ele precisa lidar com esse novo estado enquanto cumpre seu trabalho, em uma jornada que redefine o próprio herói.',
   "green-lantern":
     "Em uma Terra alternativa, um alienígena desce sobre a cidade de Evergreen, Nevada, e julga seus moradores, entre eles Guy Gardner, Hal Jordan, John Stewart e Jo Mullein. Diante do terror e do custo de reagir, alguém precisa vencer o medo para emergir como herói.",
+  "green-arrow":
+    "Um serial killer está assassinando bilionários corruptos. A única pista sobre sua identidade são as misteriosas flechas verdes cravadas nos corpos de suas vítimas. A especialista em proteção executiva Dinah Lance, também conhecida como Canário Negro Absoluta, é uma das responsáveis por descobrir quem está por trás desses crimes. Durante sua investigação, ela passa a analisar uma lista de suspeitos formada por arqueiros conhecidos do Universo DC, todos ligados de alguma forma a um recentemente assassinado Oliver Queen. Misturando a premissa de Eu Sei o Que Vocês Fizeram no Verão Passado com uma trama voltada para bilionários, Arqueiro Verde Absoluto reinventa a mitologia do Arqueiro Esmeralda como um perigoso suspense urbano de horror e mistério policial, pelas mãos dos vencedores do Prêmio Eisner Pornsak Pichetshote (Dead Boy Detectives, Infidel) e Rafael Albuquerque (Detective Comics, American Vampire).",
 }
 
 const characterUniverseSynopsisByKey: Record<string, string[]> = {

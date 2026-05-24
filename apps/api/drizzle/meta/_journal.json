@@ -85,6 +85,20 @@
       "when": 1770860000000,
       "tag": "0011_add_comic_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779563671928,
+      "tag": "0012_seed_green_arrow_character",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779587594582,
+      "tag": "0013_seed_supergirl_character",
+      "breakpoints": true
     }
   ]
 }
