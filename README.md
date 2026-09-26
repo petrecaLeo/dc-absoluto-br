@@ -31,7 +31,7 @@ Site catálogo para quadrinhos do Universo Absoluto da DC em português brasilei
 
 ```bash
 # Clone o repositório
-git clone <url-do-repositorio>
+git clone https://github.com/petrecaLeo/dc-absoluto-br.git
 cd dc-absoluto-br
 
 # Instale as dependências
@@ -171,6 +171,10 @@ dc-absoluto-br/
 - **Types/Interfaces**: `PascalCase`
 - **Commits**: Português, conventional commits (`feat:`, `fix:`, `chore:`)
 
+## Autor
+
+Desenvolvido por [petrecaLeo](https://github.com/petrecaLeo).
+
 ## Licença
 
-Projeto privado.
+© 2026 petrecaLeo. Todos os direitos reservados.
