@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { bearerHeader } from "@/components/header/auth.cookie"
 import { getSessionToken } from "@/components/header/auth.server"
 import { SERVER_API_URL } from "@/lib/env/server"
+import { crossSiteRequestResponse, isSameOriginRequest } from "@/lib/request-origin"
 
 interface RouteContext {
   params: Promise<{
@@ -10,7 +11,9 @@ interface RouteContext {
   }>
 }
 
-export async function POST(_: Request, { params }: RouteContext) {
+export async function POST(request: Request, { params }: RouteContext) {
+  if (!isSameOriginRequest(request)) return crossSiteRequestResponse()
+
   const sessionToken = await getSessionToken()
   const { id } = await params
 
@@ -19,7 +22,7 @@ export async function POST(_: Request, { params }: RouteContext) {
   }
 
   try {
-    const response = await fetch(`${SERVER_API_URL}/api/comics/${id}/read`, {
+    const response = await fetch(`${SERVER_API_URL}/api/comics/${encodeURIComponent(id)}/read`, {
       method: "POST",
       cache: "no-store",
       headers: bearerHeader(sessionToken),

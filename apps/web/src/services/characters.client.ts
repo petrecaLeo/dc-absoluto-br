@@ -41,7 +41,7 @@ export async function getCharacterComicsClient(
     searchParams.set("universe", universe)
   }
 
-  const url = `${PUBLIC_API_URL}/api/characters/${slug}/comics${
+  const url = `${PUBLIC_API_URL}/api/characters/${encodeURIComponent(slug)}/comics${
     searchParams.size > 0 ? `?${searchParams.toString()}` : ""
   }`
   const response = await fetch(url)
@@ -53,8 +53,12 @@ export async function getCharacterComicsClient(
   return response.json()
 }
 
-export async function getCharacterUniversesClient(slug: string): Promise<CharacterUniversesResponse> {
-  const response = await fetch(`${PUBLIC_API_URL}/api/characters/${slug}/universes`)
+export async function getCharacterUniversesClient(
+  slug: string,
+): Promise<CharacterUniversesResponse> {
+  const response = await fetch(
+    `${PUBLIC_API_URL}/api/characters/${encodeURIComponent(slug)}/universes`,
+  )
 
   if (!response.ok) {
     throw new Error(`Failed to fetch character universes: ${response.status}`)

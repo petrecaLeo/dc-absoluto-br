@@ -117,4 +117,14 @@ describe("Limitador de tentativas", () => {
     limiter.reset("a")
     expect(limiter.isBlocked("a", 0)).toBe(false)
   })
+
+  it("consume conta toda chamada e recusa depois do limite", () => {
+    const limiter = createAttemptLimiter({ maxAttempts: 2, windowMs: 1000 })
+
+    expect(limiter.consume("a", 0)).toBe(true)
+    expect(limiter.consume("a", 1)).toBe(true)
+    expect(limiter.consume("a", 2)).toBe(false)
+    expect(limiter.consume("b", 2)).toBe(true)
+    expect(limiter.consume("a", 1001)).toBe(true)
+  })
 })

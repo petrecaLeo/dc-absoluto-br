@@ -4,6 +4,7 @@ import { type SessionScope, verifySessionToken } from "@dc-absoluto/shared-types
 import { NextResponse } from "next/server"
 
 import { SERVER_API_URL, getServerAuthSecret } from "@/lib/env/server"
+import { crossSiteRequestResponse, isSameOriginRequest } from "@/lib/request-origin"
 import { bearerHeader, clearAdminSessionCookie, setSessionCookie } from "./auth.cookie"
 import { getAdminSessionToken, getSessionToken } from "./auth.server"
 
@@ -40,6 +41,8 @@ export async function forwardJsonPost(
     invalidTokenMessage = DEFAULT_INVALID_TOKEN_MESSAGE,
   }: ForwardJsonPostOptions,
 ) {
+  if (!isSameOriginRequest(request)) return crossSiteRequestResponse()
+
   const authToken = await getForwardToken(auth)
 
   if (auth !== "none" && !authToken) {

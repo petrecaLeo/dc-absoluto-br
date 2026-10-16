@@ -22,6 +22,17 @@ function getSiteUrl() {
   return requireEnv("SITE_URL", SITE_URL).replace(/\/+$/, "")
 }
 
+// Tudo que vem de usuário (nome, mensagem, título) entra escapado no HTML: sem isso, um cadastro
+// com nome "<a href=...>" mandaria um link de phishing a partir do nosso domínio.
+export function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
 function getResend() {
   if (!resend) {
     if (!process.env.RESEND_API_KEY) return null
@@ -69,25 +80,37 @@ export async function sendReportEmail({ message }: ReportEmailParams) {
     return null
   }
 
-  await waitForRateLimit()
-  console.log("[Email] Enviando report...")
+  try {
+    await waitForRateLimit()
+    console.log("[Email] Enviando report...")
 
-  return client.emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "DC Absoluto BR <noreply@dcabsoluto.com.br>",
-    to: "leopetrecca@gmail.com",
-    subject: "Novo reporte - DC Absoluto BR",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 32px;">
-        <h1 style="color: #e62429; margin-bottom: 8px;">DC Absoluto BR</h1>
-        <h2 style="margin-top: 0;">Novo Reporte Recebido</h2>
-        <div style="background: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #e62429; margin: 16px 0;">
-          <p style="white-space: pre-wrap; margin: 0;">${message}</p>
+    const result = await client.emails.send({
+      from: process.env.RESEND_FROM_EMAIL ?? "DC Absoluto BR <noreply@dcabsoluto.com.br>",
+      to: "leopetrecca@gmail.com",
+      subject: "Novo reporte - DC Absoluto BR",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 32px;">
+          <h1 style="color: #e62429; margin-bottom: 8px;">DC Absoluto BR</h1>
+          <h2 style="margin-top: 0;">Novo Reporte Recebido</h2>
+          <div style="background: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #e62429; margin: 16px 0;">
+            <p style="white-space: pre-wrap; margin: 0;">${escapeHtml(message)}</p>
+          </div>
+          <hr style="border-color: #333; margin: 24px 0;" />
+          <p style="font-size: 12px; color: #888;">Reporte enviado através do site DC Absoluto BR.</p>
         </div>
-        <hr style="border-color: #333; margin: 24px 0;" />
-        <p style="font-size: 12px; color: #888;">Reporte enviado através do site DC Absoluto BR.</p>
-      </div>
-    `,
-  })
+      `,
+    })
+
+    if ("error" in result && result.error) {
+      console.error("[Email] Resend retornou erro ao enviar report:", result.error)
+      return null
+    }
+
+    return result
+  } catch (error) {
+    console.error("[Email] Erro ao enviar report:", error)
+    return null
+  }
 }
 
 export async function sendEmailVerificationEmail({ to, name, token }: EmailVerificationParams) {
@@ -109,7 +132,7 @@ export async function sendEmailVerificationEmail({ to, name, token }: EmailVerif
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 32px;">
           <h1 style="color: #e62429; margin-bottom: 8px;">DC Absoluto BR</h1>
-          <h2 style="margin-top: 0;">Bem-vindo, ${name}!</h2>
+          <h2 style="margin-top: 0;">Bem-vindo, ${escapeHtml(name)}!</h2>
           <p>Seu cadastro está quase pronto. Falta apenas confirmar o seu e-mail para liberar o acesso completo à plataforma.</p>
           <div style="margin: 24px 0;">
             <a href="${confirmUrl}" style="display: inline-block; background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 42%, #dc2626 75%, #facc15 100%); color: #ffffff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase;">
@@ -158,7 +181,7 @@ export async function sendPasswordResetEmail({ to, name, token }: EmailVerificat
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 32px;">
           <h1 style="color: #e62429; margin-bottom: 8px;">DC Absoluto BR</h1>
-          <h2 style="margin-top: 0;">Olá, ${name}!</h2>
+          <h2 style="margin-top: 0;">Olá, ${escapeHtml(name)}!</h2>
           <p>Recebemos uma solicitação para redefinir a senha da sua conta. Clique no botão abaixo para criar uma nova senha.</p>
           <div style="margin: 24px 0;">
             <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 42%, #dc2626 75%, #facc15 100%); color: #ffffff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase;">
@@ -214,13 +237,13 @@ export async function sendNewComicEmail({
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 32px;">
         <h1 style="color: #3b82f6; margin-bottom: 8px;">DC Absoluto BR</h1>
         <h2 style="margin-top: 0;">Nova HQ disponível!</h2>
-        <p>Uma nova HQ de <strong>${characterName}</strong> foi adicionada ao catálogo:</p>
+        <p>Uma nova HQ de <strong>${escapeHtml(characterName)}</strong> foi adicionada ao catálogo:</p>
         <div style="background: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 16px 0;">
-          <p style="font-size: 18px; font-weight: bold; margin: 0;">${comicTitle}</p>
+          <p style="font-size: 18px; font-weight: bold; margin: 0;">${escapeHtml(comicTitle)}</p>
         </div>
         <p><a href="${getSiteUrl()}" style="color: #60a5fa; text-decoration: none;">Acesse o site para conferir!</a></p>
         <hr style="border-color: #333; margin: 24px 0;" />
-        <p style="font-size: 12px; color: #888;">Você recebeu este e-mail porque se inscreveu para receber novidades de ${characterName}. <a href="${unsubscribeUrl}" style="color: #9ca3af; text-decoration: underline;">Desinscrever</a></p>
+        <p style="font-size: 12px; color: #888;">Você recebeu este e-mail porque se inscreveu para receber novidades de ${escapeHtml(characterName)}. <a href="${unsubscribeUrl}" style="color: #9ca3af; text-decoration: underline;">Desinscrever</a></p>
       </div>
     `,
   })
@@ -251,7 +274,7 @@ export async function sendNewsletterNewComicEmail({
         <h2 style="margin-top: 0;">Novo lançamento no catálogo!</h2>
         <p>Uma nova HQ foi adicionada ao catálogo:</p>
         <div style="background: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #e62429; margin: 16px 0;">
-          <p style="font-size: 18px; font-weight: bold; margin: 0;">${comicTitle}</p>
+          <p style="font-size: 18px; font-weight: bold; margin: 0;">${escapeHtml(comicTitle)}</p>
         </div>
         <p><a href="${getSiteUrl()}" style="color: #60a5fa; text-decoration: none;">Acesse o site para conferir!</a></p>
         <hr style="border-color: #333; margin: 24px 0;" />

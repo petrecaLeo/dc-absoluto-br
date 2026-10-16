@@ -28,10 +28,11 @@ function signToken(scope: SessionScope, secret = process.env.AUTH_SECRET as stri
   )
 }
 
-function adminLogin() {
+function adminLogin(headers: Record<string, string> = {}) {
   return adminLoginRoute(
     new Request("http://localhost/api/admin/login", {
       method: "POST",
+      headers,
       body: JSON.stringify({ email: "admin@exemplo.com", password: "Senha123" }),
     }),
   )
@@ -77,5 +78,34 @@ describe("POST /api/admin/login (web)", () => {
 
     expect(response.status).toBe(502)
     expect(response.headers.get("set-cookie")).toBeNull()
+  })
+
+  it("aceita requisições vindas do próprio site", async () => {
+    const token = await signToken("admin")
+    mockFetch.mockResolvedValue(Response.json({ success: true, token, expiresIn: 1800 }))
+
+    const response = await adminLogin({
+      origin: "http://localhost:3000",
+      host: "localhost:3000",
+      "sec-fetch-site": "same-origin",
+    })
+
+    expect(response.status).toBe(200)
+  })
+
+  it("recusa requisições disparadas por outro site (CSRF)", async () => {
+    const crossSiteHeaders = [
+      { origin: "https://site-malicioso.com", host: "localhost:3000" },
+      { origin: "null", host: "localhost:3000" },
+      { "sec-fetch-site": "cross-site", host: "localhost:3000" },
+      { "sec-fetch-site": "same-site", origin: "https://api.localhost:3000" },
+    ]
+
+    for (const headers of crossSiteHeaders) {
+      const response = await adminLogin(headers)
+      expect(response.status).toBe(403)
+    }
+
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

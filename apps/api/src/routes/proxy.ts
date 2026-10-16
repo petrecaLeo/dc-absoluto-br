@@ -1,8 +1,25 @@
 import { Readable } from "node:stream"
+import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { File as MegaFile } from "megajs"
+import { db, isDbAvailable } from "../db"
+import { comics } from "../db/schema"
 
 const MEDIAFIRE_CACHE_TTL_MS = 10 * 60 * 1000
+const MEDIAFIRE_CACHE_MAX_ENTRIES = 500
+const MAX_REDIRECTS = 5
+const DOWNLOAD_FAILED_MESSAGE = "Não foi possível baixar o arquivo."
+
+// Erro com mensagem que pode ir para o navegador. Qualquer outro erro vira uma mensagem genérica,
+// para não vazar detalhes internos.
+class ProxyError extends Error {
+  constructor(
+    message: string,
+    readonly status = 400,
+  ) {
+    super(message)
+  }
+}
 
 interface CachedResolvedUrl {
   directUrl: string
@@ -50,6 +67,82 @@ function isMegaUrl(url: string): boolean {
     hostname?.endsWith(".mega.nz") === true ||
     hostname?.endsWith(".mega.co.nz") === true
   )
+}
+
+const PRIVATE_IPV4_PATTERNS = [
+  /^0\./,
+  /^10\./,
+  /^127\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+  /^(22[4-9]|2[3-5]\d)\./,
+]
+
+// Barra endereços internos (localhost, rede privada, metadados da nuvem) para que o proxy não sirva
+// de ponte para dentro da infraestrutura (SSRF).
+function isPublicHttpUrl(url: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false
+  if (parsed.username || parsed.password) return false
+
+  const hostname = parsed.hostname.toLowerCase()
+  if (!hostname.includes(".") || hostname.startsWith("[")) return false
+  if (
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal")
+  ) {
+    return false
+  }
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return !PRIVATE_IPV4_PATTERNS.some((pattern) => pattern.test(hostname))
+  }
+
+  return true
+}
+
+// Links fora de Google Drive, MediaFire e MEGA só passam se forem o download de uma HQ cadastrada.
+async function isRegisteredDownloadUrl(url: string): Promise<boolean> {
+  if (!isDbAvailable) return false
+
+  const [comic] = await db!
+    .select({ id: comics.id })
+    .from(comics)
+    .where(eq(comics.downloadUrl, url))
+    .limit(1)
+
+  return Boolean(comic)
+}
+
+// Segue redirecionamentos manualmente para conferir cada destino, em vez de deixar o fetch ir
+// para onde o servidor remoto mandar.
+async function fetchPublicUrl(url: string): Promise<Response> {
+  let currentUrl = url
+
+  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+    if (!isPublicHttpUrl(currentUrl)) {
+      throw new ProxyError("Endereço de download não permitido.")
+    }
+
+    const response = await fetch(currentUrl, { headers: PROXY_HEADERS, redirect: "manual" })
+    const location =
+      response.status >= 300 && response.status < 400 ? response.headers.get("location") : null
+
+    if (!location) return response
+
+    await response.body?.cancel()
+    currentUrl = new URL(location, currentUrl).toString()
+  }
+
+  throw new Error("Redirecionamentos demais ao baixar o arquivo")
 }
 
 function isHtmlResponse(response: Response): boolean {
@@ -129,6 +222,11 @@ function getCachedMediaFireDirectUrl(url: string): string | null {
 }
 
 function setCachedMediaFireDirectUrl(url: string, directUrl: string): void {
+  if (mediaFireDirectUrlCache.size >= MEDIAFIRE_CACHE_MAX_ENTRIES) {
+    const oldestKey = mediaFireDirectUrlCache.keys().next().value
+    if (oldestKey !== undefined) mediaFireDirectUrlCache.delete(oldestKey)
+  }
+
   mediaFireDirectUrlCache.set(url, {
     directUrl,
     expiresAt: Date.now() + MEDIAFIRE_CACHE_TTL_MS,
@@ -189,6 +287,11 @@ async function fetchFromMediaFire(url: string): Promise<Response> {
     throw new Error("Link de download do MediaFire não encontrado")
   }
 
+  // O link sai do HTML da página; só seguimos se ele continuar dentro do MediaFire.
+  if (!isMediaFireUrl(directUrl) || !isPublicHttpUrl(directUrl)) {
+    throw new Error(`MediaFire apontou para um domínio inesperado: ${directUrl}`)
+  }
+
   setCachedMediaFireDirectUrl(url, directUrl)
 
   const downloadResponse = await fetch(directUrl, {
@@ -245,6 +348,11 @@ export const proxy = new Elysia({ prefix: "/proxy" }).get(
       return { error: "URL é obrigatória" }
     }
 
+    if (!isPublicHttpUrl(url)) {
+      set.status = 400
+      return { error: "Endereço de download não permitido." }
+    }
+
     try {
       const response = isGDriveUrl(url)
         ? await fetchFromGDrive(url)
@@ -252,7 +360,14 @@ export const proxy = new Elysia({ prefix: "/proxy" }).get(
           ? await fetchFromMediaFire(url)
           : isMegaUrl(url)
             ? await fetchFromMega(url)
-            : await fetch(url, { headers: PROXY_HEADERS, redirect: "follow" })
+            : (await isRegisteredDownloadUrl(url))
+              ? await fetchPublicUrl(url)
+              : null
+
+      if (!response) {
+        set.status = 400
+        return { error: "Endereço de download não permitido." }
+      }
 
       if (!response.ok) {
         set.status = response.status
@@ -267,7 +382,6 @@ export const proxy = new Elysia({ prefix: "/proxy" }).get(
       const lastModified = response.headers.get("last-modified")
 
       set.headers["content-type"] = contentType
-      set.headers["access-control-allow-origin"] = "*"
       set.headers["access-control-expose-headers"] =
         "content-length, content-disposition, cache-control, etag, last-modified"
       set.headers["cache-control"] = cacheControl
@@ -290,16 +404,19 @@ export const proxy = new Elysia({ prefix: "/proxy" }).get(
 
       return response
     } catch (error) {
+      if (error instanceof ProxyError) {
+        set.status = error.status
+        return { error: error.message }
+      }
+
       console.error("Erro no proxy:", error)
       set.status = 500
-      return {
-        error: error instanceof Error ? error.message : "Erro interno ao processar download",
-      }
+      return { error: DOWNLOAD_FAILED_MESSAGE }
     }
   },
   {
     query: t.Object({
-      url: t.String(),
+      url: t.String({ maxLength: 2048 }),
     }),
   },
 )

@@ -19,8 +19,16 @@ COPY packages ./packages
 
 WORKDIR /app/apps/api
 
+# Depois do install (que precisa das devDependencies) e antes do build: o bun build embute o valor de
+# process.env.NODE_ENV no bundle. Em produção o Elysia omite detalhes de validação nas respostas e
+# a documentação Swagger fica desligada.
+ENV NODE_ENV=production
+
 # Build API
 RUN pnpm build
+
+# Roda sem root: a API só lê os arquivos da imagem.
+USER bun
 
 EXPOSE 3001
 

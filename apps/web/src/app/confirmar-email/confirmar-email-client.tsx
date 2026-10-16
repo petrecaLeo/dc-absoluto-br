@@ -8,6 +8,37 @@ type VerificationStatus = "loading" | "success" | "expired" | "invalid" | "error
 
 const REDIRECT_DELAY_SECONDS = 5
 
+interface VerificationResult {
+  ok: boolean
+  status: number
+  data: { message?: string }
+}
+
+// Uma confirmação por token, mesmo que o efeito rode duas vezes (StrictMode) ou o componente
+// remonte: o segundo envio chegaria depois do primeiro e mostraria "link já utilizado".
+const verificationRequests = new Map<string, Promise<VerificationResult>>()
+
+function verifyEmailToken(token: string): Promise<VerificationResult> {
+  let request = verificationRequests.get(token)
+
+  if (!request) {
+    request = fetch(`${PUBLIC_API_URL}/api/auth/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }).then(async (response) => ({
+      ok: response.ok,
+      status: response.status,
+      data: await response.json().catch(() => ({})),
+    }))
+    // Falha de rede pode ser tentada de novo.
+    request.catch(() => verificationRequests.delete(token))
+    verificationRequests.set(token, request)
+  }
+
+  return request
+}
+
 export default function ConfirmarEmailClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -27,13 +58,8 @@ export default function ConfirmarEmailClient() {
 
     const verifyEmail = async () => {
       try {
-        const response = await fetch(`${PUBLIC_API_URL}/api/auth/verify-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        })
-
-        const data = await response.json().catch(() => ({}))
+        const response = await verifyEmailToken(token)
+        const { data } = response
         if (!isActive) return
 
         if (response.ok) {

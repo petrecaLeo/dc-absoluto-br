@@ -13,6 +13,7 @@ import { getAdminFromRequest, getAuthUserFromRequest } from "../utils/auth"
 
 const normalizeText = (value?: string | null) => value?.trim() || undefined
 const UNIVERSE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const comicIdParams = t.Object({ id: t.String({ format: "uuid" }) })
 
 const isHttpUrl = (value: string) => {
   try {
@@ -29,7 +30,8 @@ const normalizeUniverse = (value?: string | null) => {
   return trimmed.replace(/\s+/g, "-")
 }
 
-const resolveUniverse = (value?: string | null) => normalizeUniverse(value) ?? DEFAULT_COMIC_UNIVERSE
+const resolveUniverse = (value?: string | null) =>
+  normalizeUniverse(value) ?? DEFAULT_COMIC_UNIVERSE
 
 const parseReleaseDate = (value?: string | null) => {
   if (!value) return undefined
@@ -329,57 +331,65 @@ export const comics = new Elysia({ prefix: "/comics" })
       }),
     },
   )
-  .get("/:id", async ({ params: { id }, set }) => {
-    if (!isDbAvailable) {
-      set.status = 404
-      return { data: null, message: "HQ não encontrada" }
-    }
+  .get(
+    "/:id",
+    async ({ params: { id }, set }) => {
+      if (!isDbAvailable) {
+        set.status = 404
+        return { data: null, message: "HQ não encontrada" }
+      }
 
-    const comic = await db!.select().from(comicsTable).where(eq(comicsTable.id, id)).limit(1)
+      const comic = await db!.select().from(comicsTable).where(eq(comicsTable.id, id)).limit(1)
 
-    if (comic.length === 0) {
-      set.status = 404
-      return { data: null, message: "HQ não encontrada" }
-    }
+      if (comic.length === 0) {
+        set.status = 404
+        return { data: null, message: "HQ não encontrada" }
+      }
 
-    return { data: comic[0] }
-  })
-  .post("/:id/read", async ({ params: { id }, set, request }) => {
-    if (!isDbAvailable) {
-      set.status = 503
-      return { success: false, message: "Banco indisponível" }
-    }
+      return { data: comic[0] }
+    },
+    { params: comicIdParams },
+  )
+  .post(
+    "/:id/read",
+    async ({ params: { id }, set, request }) => {
+      if (!isDbAvailable) {
+        set.status = 503
+        return { success: false, message: "Banco indisponível" }
+      }
 
-    const authUser = await getAuthUserFromRequest(request)
-    if (!authUser) {
-      set.status = 401
-      return { success: false, message: "Usuário não autenticado" }
-    }
-
-    try {
-      const [dbUser] = await db!
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.email, authUser.email))
-        .limit(1)
-
-      if (!dbUser) {
+      const authUser = await getAuthUserFromRequest(request)
+      if (!authUser) {
         set.status = 401
         return { success: false, message: "Usuário não autenticado" }
       }
 
-      await db!
-        .insert(userReadComics)
-        .values({
-          userId: dbUser.id,
-          comicId: id,
-        })
-        .onConflictDoNothing()
+      try {
+        const [dbUser] = await db!
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, authUser.email))
+          .limit(1)
 
-      return { success: true }
-    } catch (error) {
-      console.error("Erro ao salvar leitura:", error)
-      set.status = 500
-      return { success: false, message: "Erro ao salvar leitura" }
-    }
-  })
+        if (!dbUser) {
+          set.status = 401
+          return { success: false, message: "Usuário não autenticado" }
+        }
+
+        await db!
+          .insert(userReadComics)
+          .values({
+            userId: dbUser.id,
+            comicId: id,
+          })
+          .onConflictDoNothing()
+
+        return { success: true }
+      } catch (error) {
+        console.error("Erro ao salvar leitura:", error)
+        set.status = 500
+        return { success: false, message: "Erro ao salvar leitura" }
+      }
+    },
+    { params: comicIdParams },
+  )

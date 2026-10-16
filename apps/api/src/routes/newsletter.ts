@@ -30,7 +30,8 @@ export const newsletter = new Elysia({ prefix: "/newsletter" })
         return { success: true, message: "Sua inscrição foi reativada com sucesso" }
       }
 
-      await db!.insert(newsletterSubscribers).values({ email: body.email })
+      // Dois envios simultâneos do mesmo e-mail: o segundo vira no-op em vez de estourar o unique.
+      await db!.insert(newsletterSubscribers).values({ email: body.email }).onConflictDoNothing()
 
       return { success: true, message: `Email ${body.email} inscrito com sucesso` }
     },

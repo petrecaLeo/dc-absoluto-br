@@ -1,5 +1,5 @@
 import { desc, eq, sql } from "drizzle-orm"
-import { Elysia } from "elysia"
+import { Elysia, t } from "elysia"
 import { db, isDbAvailable } from "../db"
 import { characters, comicsToCharacters, userReadComics, users } from "../db/schema"
 
@@ -61,5 +61,8 @@ export const usersRoute = new Elysia({ prefix: "/users" }).get(
         topCharacters: topOnes,
       },
     }
+  },
+  {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
   },
 )

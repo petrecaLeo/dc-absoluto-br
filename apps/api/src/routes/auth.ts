@@ -5,6 +5,7 @@ import { db, isDbAvailable } from "../db"
 import { passwordResetTokens, userEmailVerifications, users } from "../db/schema"
 import { sendEmailVerificationEmail, sendPasswordResetEmail } from "../services/email"
 import { createUserSessionToken, getAuthUserFromRequest } from "../utils/auth"
+import { createEmailToken, hashEmailToken, matchesEmailToken } from "../utils/email-token"
 import { TOO_MANY_ATTEMPTS_MESSAGE, createAttemptLimiter } from "../utils/rate-limit"
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
@@ -13,10 +14,14 @@ const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 const PROFILE_IMAGE_IDS = new Set(PROFILE_IMAGE_OPTIONS.map((option) => option.id))
 const loginLimiter = createAttemptLimiter({ maxAttempts: 10, windowMs: 15 * 60 * 1000 })
+const changePasswordLimiter = createAttemptLimiter({ maxAttempts: 5, windowMs: 15 * 60 * 1000 })
+// Cada e-mail de destino recebe no máximo alguns links por hora (cadastro + reenvio e redefinição),
+// para que ninguém use o site para lotar a caixa de entrada de outra pessoa.
+const verificationEmailLimiter = createAttemptLimiter({ maxAttempts: 5, windowMs: 60 * 60 * 1000 })
+const passwordResetEmailLimiter = createAttemptLimiter({ maxAttempts: 3, windowMs: 60 * 60 * 1000 })
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
-const normalizeName = (name: string) => name.trim().replace(/\\s+/g, " ")
-const createVerificationToken = () => crypto.randomUUID()
+const normalizeName = (name: string) => name.trim().replace(/\s+/g, " ")
 
 export const auth = new Elysia({ prefix: "/auth" })
   .post(
@@ -54,8 +59,13 @@ export const auth = new Elysia({ prefix: "/auth" })
         return { success: false, message: "E-mail já cadastrado." }
       }
 
+      if (!verificationEmailLimiter.consume(normalizedEmail)) {
+        set.status = 429
+        return { success: false, message: TOO_MANY_ATTEMPTS_MESSAGE }
+      }
+
       const passwordHash = await Bun.password.hash(body.password)
-      const token = createVerificationToken()
+      const token = createEmailToken()
       const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS)
 
       const [pendingRegistration] = await db!
@@ -71,7 +81,7 @@ export const auth = new Elysia({ prefix: "/auth" })
             name: normalizedName,
             email: normalizedEmail,
             passwordHash,
-            token,
+            token: hashEmailToken(token),
             expiresAt,
           })
           .where(eq(userEmailVerifications.id, pendingRegistration.id))
@@ -80,7 +90,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           name: normalizedName,
           email: normalizedEmail,
           passwordHash,
-          token,
+          token: hashEmailToken(token),
           expiresAt,
         })
       }
@@ -229,12 +239,20 @@ export const auth = new Elysia({ prefix: "/auth" })
           return { success: false, message: "Usuário não autenticado." }
         }
 
+        if (changePasswordLimiter.isBlocked(user.id)) {
+          set.status = 429
+          return { success: false, message: TOO_MANY_ATTEMPTS_MESSAGE }
+        }
+
         const isPasswordValid = await Bun.password.verify(body.currentPassword, user.passwordHash)
 
         if (!isPasswordValid) {
+          changePasswordLimiter.registerFailure(user.id)
           set.status = 401
           return { success: false, message: "Senha atual inválida." }
         }
+
+        changePasswordLimiter.reset(user.id)
 
         if (body.currentPassword === body.newPassword) {
           set.status = 400
@@ -410,7 +428,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       const [pending] = await db!
         .select()
         .from(userEmailVerifications)
-        .where(eq(userEmailVerifications.token, body.token))
+        .where(matchesEmailToken(userEmailVerifications.token, body.token))
         .limit(1)
 
       if (!pending) {
@@ -438,11 +456,15 @@ export const auth = new Elysia({ prefix: "/auth" })
         return { success: true, message: "E-mail já confirmado. Faça login." }
       }
 
-      await db!.insert(users).values({
-        name: pending.name,
-        email: pending.email,
-        passwordHash: pending.passwordHash,
-      })
+      // Dois cliques no link (ou duas abas) chegam juntos: o segundo insert vira no-op em vez de 500.
+      await db!
+        .insert(users)
+        .values({
+          name: pending.name,
+          email: pending.email,
+          passwordHash: pending.passwordHash,
+        })
+        .onConflictDoNothing({ target: users.email })
 
       await db!.delete(userEmailVerifications).where(eq(userEmailVerifications.id, pending.id))
 
@@ -456,7 +478,7 @@ export const auth = new Elysia({ prefix: "/auth" })
   )
   .post(
     "/request-password-reset",
-    async ({ body }) => {
+    async ({ body, set }) => {
       const normalizedEmail = normalizeEmail(body.email)
       const successMessage =
         "Se o e-mail estiver cadastrado, enviaremos um link para redefinir a senha."
@@ -465,20 +487,26 @@ export const auth = new Elysia({ prefix: "/auth" })
         return { success: true, message: successMessage }
       }
 
+      // O limite vale antes de olhar o banco, para a resposta não revelar se o e-mail existe.
+      if (!passwordResetEmailLimiter.consume(normalizedEmail)) {
+        set.status = 429
+        return { success: false, message: TOO_MANY_ATTEMPTS_MESSAGE }
+      }
+
       const [user] = await db!.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
 
       if (!user) {
         return { success: true, message: successMessage }
       }
 
-      const token = createVerificationToken()
+      const token = createEmailToken()
       const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS)
 
       await db!.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id))
 
       await db!.insert(passwordResetTokens).values({
         userId: user.id,
-        token,
+        token: hashEmailToken(token),
         expiresAt,
       })
 
@@ -503,11 +531,12 @@ export const auth = new Elysia({ prefix: "/auth" })
         return { success: true, message: "Senha redefinida (ambiente sem banco)." }
       }
 
+      // Apagar e ler numa só operação garante que o link funcione uma única vez, mesmo com
+      // dois envios simultâneos do formulário.
       const [resetToken] = await db!
-        .select()
-        .from(passwordResetTokens)
-        .where(eq(passwordResetTokens.token, body.token))
-        .limit(1)
+        .delete(passwordResetTokens)
+        .where(matchesEmailToken(passwordResetTokens.token, body.token))
+        .returning()
 
       if (!resetToken) {
         set.status = 404
@@ -515,8 +544,6 @@ export const auth = new Elysia({ prefix: "/auth" })
       }
 
       if (resetToken.expiresAt.getTime() < Date.now()) {
-        await db!.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetToken.id))
-
         set.status = 410
         return { success: false, message: "Este link expirou. Solicite um novo link." }
       }
@@ -527,8 +554,6 @@ export const auth = new Elysia({ prefix: "/auth" })
         .update(users)
         .set({ passwordHash, updatedAt: new Date() })
         .where(eq(users.id, resetToken.userId))
-
-      await db!.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetToken.id))
 
       return { success: true, message: "Senha redefinida com sucesso." }
     },
@@ -571,12 +596,17 @@ export const auth = new Elysia({ prefix: "/auth" })
         }
       }
 
-      const token = createVerificationToken()
+      if (!verificationEmailLimiter.consume(normalizedEmail)) {
+        set.status = 429
+        return { success: false, message: TOO_MANY_ATTEMPTS_MESSAGE }
+      }
+
+      const token = createEmailToken()
       const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS)
 
       await db!
         .update(userEmailVerifications)
-        .set({ token, expiresAt })
+        .set({ token: hashEmailToken(token), expiresAt })
         .where(eq(userEmailVerifications.id, pending.id))
 
       const emailResult = await sendEmailVerificationEmail({

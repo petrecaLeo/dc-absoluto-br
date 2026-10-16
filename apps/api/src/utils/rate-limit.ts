@@ -1,4 +1,5 @@
-// Limitador de tentativas em memória (por instância). Suficiente para frear força bruta no login.
+// Limitador de tentativas em memória (por instância). Suficiente para frear força bruta no login
+// e o disparo em massa de e-mails.
 
 interface AttemptWindow {
   count: number
@@ -34,19 +35,28 @@ export function createAttemptLimiter({ maxAttempts, windowMs }: AttemptLimiterOp
     }
   }
 
-  return {
-    isBlocked(key: string, now: number = Date.now()) {
-      return (getActiveWindow(key, now)?.count ?? 0) >= maxAttempts
-    },
-    registerFailure(key: string, now: number = Date.now()) {
-      const window = getActiveWindow(key, now)
-      if (window) {
-        window.count += 1
-        return
-      }
+  const isBlocked = (key: string, now: number = Date.now()) =>
+    (getActiveWindow(key, now)?.count ?? 0) >= maxAttempts
 
-      if (attempts.size >= MAX_TRACKED_KEYS) purgeExpired(now)
-      attempts.set(key, { count: 1, resetAt: now + windowMs })
+  const registerFailure = (key: string, now: number = Date.now()) => {
+    const window = getActiveWindow(key, now)
+    if (window) {
+      window.count += 1
+      return
+    }
+
+    if (attempts.size >= MAX_TRACKED_KEYS) purgeExpired(now)
+    attempts.set(key, { count: 1, resetAt: now + windowMs })
+  }
+
+  return {
+    isBlocked,
+    registerFailure,
+    // Conta toda chamada, não só as falhas. Devolve false quando o limite da janela já foi atingido.
+    consume(key: string, now: number = Date.now()) {
+      if (isBlocked(key, now)) return false
+      registerFailure(key, now)
+      return true
     },
     reset(key: string) {
       attempts.delete(key)

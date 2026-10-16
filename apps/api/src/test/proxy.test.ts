@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
 import { Readable } from "node:stream"
 
 interface MockMegaFile {
@@ -172,24 +172,58 @@ describe("Proxy endpoints", () => {
     expect(await secondResponse.text()).toBe("cached-mediafire-file")
   })
 
-  it("falls back to a direct fetch for other providers", async () => {
-    queuedResponses.push(
-      new Response("generic-file", {
-        headers: {
-          "content-type": "application/octet-stream",
-        },
-      }),
-    )
-
+  it("refuses other providers when the link is not a registered comic download", async () => {
     const directUrl = "https://example.com/files/comic.cbr"
     const response = await app.handle(
       new Request(`http://localhost/api/proxy/download?url=${encodeURIComponent(directUrl)}`),
     )
 
-    expect(response.status).toBe(200)
-    expect(fetchCalls.map((call) => call.url)).toEqual([directUrl])
-    expect(response.headers.get("content-type")).toBe("application/octet-stream")
-    expect(await response.text()).toBe("generic-file")
+    expect(response.status).toBe(400)
+    expect(fetchCalls).toHaveLength(0)
+  })
+
+  it("refuses internal addresses (SSRF)", async () => {
+    const internalUrls = [
+      "http://169.254.169.254/latest/meta-data/",
+      "http://127.0.0.1:3001/health",
+      "http://localhost:3001/health",
+      "http://api:3001/health",
+      "http://2130706433/",
+      "http://[::1]/",
+      "http://10.0.0.5/arquivo.cbr",
+      "file:///etc/passwd",
+    ]
+
+    for (const internalUrl of internalUrls) {
+      const response = await app.handle(
+        new Request(`http://localhost/api/proxy/download?url=${encodeURIComponent(internalUrl)}`),
+      )
+      expect(response.status).toBe(400)
+    }
+
+    expect(fetchCalls).toHaveLength(0)
+  })
+
+  it("does not follow MediaFire pages that point outside MediaFire", async () => {
+    const errorSpy = spyOn(console, "error").mockImplementation(() => {})
+    queuedResponses.push(
+      new Response(
+        '<html><body><a id="downloadButton" href="http://169.254.169.254/latest/meta-data/">Baixar</a></body></html>',
+        { headers: { "content-type": "text/html; charset=utf-8" } },
+      ),
+    )
+
+    const mediaFireUrl = "https://www.mediafire.com/file/evil123/comic.cbr/file"
+    const response = await app.handle(
+      new Request(`http://localhost/api/proxy/download?url=${encodeURIComponent(mediaFireUrl)}`),
+    )
+    const body = (await response.json()) as { error: string }
+
+    expect(response.status).toBe(500)
+    expect(fetchCalls.map((call) => call.url)).toEqual([mediaFireUrl])
+    expect(body.error).toBe("Não foi possível baixar o arquivo.")
+    expect(JSON.stringify(body)).not.toContain("169.254")
+    errorSpy.mockRestore()
   })
 
   it("resolves MEGA files for online reading and download", async () => {

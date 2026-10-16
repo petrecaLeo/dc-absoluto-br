@@ -14,7 +14,7 @@ export interface UserProfileResponse {
 }
 
 export async function getUserProfile(id: string): Promise<UserProfileResponse> {
-  const response = await fetch(`${PUBLIC_API_URL}/api/users/${id}/profile`)
+  const response = await fetch(`${PUBLIC_API_URL}/api/users/${encodeURIComponent(id)}/profile`)
 
   if (!response.ok) {
     throw new Error(`Failed to fetch user profile: ${response.status}`)

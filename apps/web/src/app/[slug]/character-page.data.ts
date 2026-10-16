@@ -35,7 +35,7 @@ export const getCharacterComics = cache(
 
     try {
       const response = await fetch(
-        `${SERVER_API_URL}/api/characters/${slug}/comics?${searchParams.toString()}`,
+        `${SERVER_API_URL}/api/characters/${encodeURIComponent(slug)}/comics?${searchParams.toString()}`,
         {
           next: { revalidate: characterPageRevalidate },
         },
@@ -55,9 +55,12 @@ export const getCharacterComics = cache(
 export const getCharacterUniverses = cache(
   async (slug: string): Promise<CharacterUniversesResponse | null> => {
     try {
-      const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/universes`, {
-        next: { revalidate: characterPageRevalidate },
-      })
+      const response = await fetch(
+        `${SERVER_API_URL}/api/characters/${encodeURIComponent(slug)}/universes`,
+        {
+          next: { revalidate: characterPageRevalidate },
+        },
+      )
 
       if (!response.ok) {
         return null
@@ -77,10 +80,13 @@ export async function getReadComicsByCharacter(
   if (!sessionToken) return []
 
   try {
-    const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics/read`, {
-      cache: "no-store",
-      headers: bearerHeader(sessionToken),
-    })
+    const response = await fetch(
+      `${SERVER_API_URL}/api/characters/${encodeURIComponent(slug)}/comics/read`,
+      {
+        cache: "no-store",
+        headers: bearerHeader(sessionToken),
+      },
+    )
 
     if (!response.ok) return []
 

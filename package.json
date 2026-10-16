@@ -22,7 +22,20 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "turbo": "^2.3.3",
+    "turbo": "^2.10.13",
     "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "browserslist": "4.28.7",
+      "lodash-es": "4.18.1",
+      "nanoid@^3": "3.3.18",
+      "nanoid@^5": "5.1.16",
+      "picomatch@^4": "4.0.7",
+      "rollup@^4": "4.59.0",
+      "shell-quote": "1.11.0",
+      "source-map-js": "1.2.2",
+      "ws@^8": "8.21.0"
+    }
   }
 }

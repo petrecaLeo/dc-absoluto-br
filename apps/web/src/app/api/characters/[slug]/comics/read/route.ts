@@ -19,10 +19,13 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 
   try {
-    const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics/read`, {
-      cache: "no-store",
-      headers: bearerHeader(sessionToken),
-    })
+    const response = await fetch(
+      `${SERVER_API_URL}/api/characters/${encodeURIComponent(slug)}/comics/read`,
+      {
+        cache: "no-store",
+        headers: bearerHeader(sessionToken),
+      },
+    )
 
     if (!response.ok) {
       return NextResponse.json({ data: [] }, { status: response.status })
