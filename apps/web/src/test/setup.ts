@@ -9,6 +9,7 @@ process.env.NEXT_PUBLIC_API_URL ??= "http://localhost:3001"
 process.env.NEXT_PUBLIC_SITE_URL ??= "http://localhost:3000"
 process.env.API_URL ??= process.env.NEXT_PUBLIC_API_URL
 process.env.SITE_URL ??= process.env.NEXT_PUBLIC_SITE_URL
+process.env.AUTH_SECRET ??= "dc-absoluto-segredo-de-teste-nao-usar-em-producao"
 
 if (typeof window !== "undefined") {
   window.scrollTo = () => {}

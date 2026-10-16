@@ -6,7 +6,8 @@ export type SortOrder = "initial" | "oldest" | "newest"
 export type EditionFilter = "all" | "special"
 
 function isSpecialEdition(comic: Comic): boolean {
-  if (comic.issueNumber === undefined) return false
+  // A API devolve null quando a HQ não tem número.
+  if (typeof comic.issueNumber !== "number") return false
   return !Number.isInteger(comic.issueNumber)
 }
 

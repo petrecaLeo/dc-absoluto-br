@@ -1,9 +1,9 @@
 "use client"
 
-import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
-import { subscribeAuthChanges } from "@/components/header/auth.storage"
+import { getStoredUser, subscribeAuthChanges } from "@/components/header/auth.storage"
 import type { AuthUser } from "@/components/header/auth.types"
 import type { CharacterImages } from "@/constants/character-images"
+import { isOptimizedImageUrl } from "@/lib/remote-images"
 import {
   type Character,
   type Comic,
@@ -66,6 +66,8 @@ const characterSynopsisBySlug: Record<string, string> = {
     'O agente do FBI John Jones tem o cérebro infectado por uma consciência alienígena chamada "O Marciano", cuja percepção é incompreensível para a mente humana. Ele precisa lidar com esse novo estado enquanto cumpre seu trabalho, em uma jornada que redefine o próprio herói.',
   "green-lantern":
     "Em uma Terra alternativa, um alienígena desce sobre a cidade de Evergreen, Nevada, e julga seus moradores, entre eles Guy Gardner, Hal Jordan, John Stewart e Jo Mullein. Diante do terror e do custo de reagir, alguém precisa vencer o medo para emergir como herói.",
+  catwoman:
+    "Com toda a riqueza, todo o equipamento e todas as habilidades, ela é a Predadora Absoluta! Selina Kyle construiu uma boa vida para si: com engenhosidade e talento, tornou-se a maior ladra que o mundo já conheceu, e com equipamentos e armas de alta tecnologia não existe lugar seguro demais para a Mulher-Gato. Mas quando alguém do seu passado bate à sua porta, tudo o que ela construiu começa a desmoronar. Para sobreviver, Selina precisa desvendar um mistério que a leva ao redor do mundo e às sombras mais profundas do Universo Absoluto. Continuando de onde Batman Absoluto #14 parou, a série retoma os segredos do passado de Selina e seus laços misteriosos com o Máscara Negra, pelas mãos de Che Grayson e Scott Snyder, com arte de Bengal.",
   "green-arrow":
     "Um serial killer está assassinando bilionários corruptos. A única pista sobre sua identidade são as misteriosas flechas verdes cravadas nos corpos de suas vítimas. A especialista em proteção executiva Dinah Lance, também conhecida como Canário Negro Absoluta, é uma das responsáveis por descobrir quem está por trás desses crimes. Durante sua investigação, ela passa a analisar uma lista de suspeitos formada por arqueiros conhecidos do Universo DC, todos ligados de alguma forma a um recentemente assassinado Oliver Queen. Misturando a premissa de Eu Sei o Que Vocês Fizeram no Verão Passado com uma trama voltada para bilionários, Arqueiro Verde Absoluto reinventa a mitologia do Arqueiro Esmeralda como um perigoso suspense urbano de horror e mistério policial, pelas mãos dos vencedores do Prêmio Eisner Pornsak Pichetshote (Dead Boy Detectives, Infidel) e Rafael Albuquerque (Detective Comics, American Vampire).",
 }
@@ -126,17 +128,6 @@ function getLatestComic(comics: Comic[]): Comic | null {
     if (!latest.releaseDate) return comic
     return new Date(comic.releaseDate) > new Date(latest.releaseDate) ? comic : latest
   })
-}
-
-function getClientAuthUser() {
-  if (typeof document === "undefined") return null
-
-  const authCookie = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${AUTH_COOKIE_KEY}=`))
-    ?.slice(AUTH_COOKIE_KEY.length + 1)
-
-  return decodeAuthCookie(authCookie)
 }
 
 export function CharacterPageContent({
@@ -360,7 +351,7 @@ function ComicsGrid({
   } = useComicsFilter(comics)
   const [authUserState, setAuthUserState] = useState<AuthUser | null>(() => {
     if (typeof window === "undefined") return authUser
-    return getClientAuthUser()
+    return getStoredUser()
   })
   const [readingProgressMap, setReadingProgressMap] = useState<Record<string, ReadingProgress>>({})
   const [readComicsState, setReadComicsState] = useState<ReadComicEntry[]>(() =>
@@ -370,7 +361,7 @@ function ComicsGrid({
   const didInitialProgressLoad = useRef(false)
 
   useEffect(() => {
-    setAuthUserState(getClientAuthUser())
+    setAuthUserState(getStoredUser())
 
     const unsubscribe = subscribeAuthChanges((user) => {
       setAuthUserState(user)
@@ -776,6 +767,7 @@ function ComicCard({
         {comic.coverUrl ? (
           <Image
             src={comic.coverUrl}
+            unoptimized={!isOptimizedImageUrl(comic.coverUrl)}
             alt={comic.title}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 250px"

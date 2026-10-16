@@ -1,7 +1,6 @@
 import { type ReactNode, act } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTH_COOKIE_KEY, encodeAuthCookie } from "@/components/header/auth.cookie"
 import type { AuthUser } from "@/components/header/auth.types"
 import { fireEvent, render, screen, waitFor } from "@/test/utils"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
@@ -10,11 +9,13 @@ const authState = vi.hoisted(() => {
   let listener: ((user: AuthUser | null) => void) | null = null
 
   return {
+    storedUser: null as AuthUser | null,
     emit(user: AuthUser | null) {
       listener?.(user)
     },
     reset() {
       listener = null
+      this.storedUser = null
     },
     subscribeMock: vi.fn((callback: (user: AuthUser | null) => void) => {
       listener = callback
@@ -48,6 +49,7 @@ vi.mock("next/link", () => ({
 }))
 
 vi.mock("@/components/header/auth.storage", () => ({
+  getStoredUser: () => authState.storedUser,
   subscribeAuthChanges: authState.subscribeMock,
 }))
 
@@ -126,23 +128,19 @@ const theme = {
   accentColor: "#0099ff",
 }
 
-function setAuthCookie(nextUser: AuthUser | null) {
-  document.cookie = `${AUTH_COOKIE_KEY}=; Max-Age=0; Path=/`
-
-  if (nextUser) {
-    document.cookie = `${AUTH_COOKIE_KEY}=${encodeAuthCookie(nextUser)}; Path=/`
-  }
+function setStoredUser(nextUser: AuthUser | null) {
+  authState.storedUser = nextUser
 }
 
 describe("CharacterPageContent auth sync", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authState.reset()
-    setAuthCookie(null)
+    setStoredUser(null)
     authState.getReadComicsByCharacterMock.mockResolvedValue({ data: [] })
   })
 
-  it("hides authenticated controls when the current cookie is logged out", () => {
+  it("hides authenticated controls when the browser has no stored session", () => {
     render(
       <CharacterPageContent
         slug="batman"
@@ -181,7 +179,7 @@ describe("CharacterPageContent auth sync", () => {
 
     expect(screen.queryByRole("button", { name: /marcar como lida/i })).not.toBeInTheDocument()
 
-    setAuthCookie(user)
+    setStoredUser(user)
     await act(async () => {
       authState.emit(user)
     })
@@ -197,7 +195,7 @@ describe("CharacterPageContent auth sync", () => {
     expect(screen.getByText(/Lido em:/i)).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /marcar como lida/i })).not.toBeInTheDocument()
 
-    setAuthCookie(null)
+    setStoredUser(null)
     await act(async () => {
       authState.emit(null)
     })
@@ -224,7 +222,7 @@ describe("CharacterPageContent auth sync", () => {
       />,
     )
 
-    setAuthCookie(user)
+    setStoredUser(user)
     await act(async () => {
       authState.emit(user)
     })

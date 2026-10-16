@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm"
+import { and, asc, eq, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { DEFAULT_COMIC_UNIVERSE, getComicUniverseLabel } from "@dc-absoluto/shared-types"
 import { db, isDbAvailable } from "../db"
@@ -37,7 +37,7 @@ export const characters = new Elysia({ prefix: "/characters" })
       return { data: [], message: "Banco indisponível" }
     }
 
-    const authUser = getAuthUserFromRequest(request)
+    const authUser = await getAuthUserFromRequest(request)
     if (!authUser) {
       set.status = 401
       return { data: [], message: "Usuário não autenticado" }
@@ -109,7 +109,8 @@ export const characters = new Elysia({ prefix: "/characters" })
       .from(comicsToCharacters)
       .innerJoin(comics, eq(comicsToCharacters.comicId, comics.id))
       .where(eq(comicsToCharacters.characterId, character[0].id))
-      .orderBy(desc(comics.releaseDate), asc(comics.title))
+      // HQ sem data não pode virar a "mais recente" do universo (DESC põe NULL primeiro no Postgres).
+      .orderBy(sql`${comics.releaseDate} desc nulls last`, asc(comics.title))
 
     const groupedByUniverse = new Map<
       string,

@@ -9,10 +9,19 @@ import {
   userReadComics,
   users,
 } from "../db/schema"
-import { getAuthUserFromRequest } from "../utils/auth"
+import { getAdminFromRequest, getAuthUserFromRequest } from "../utils/auth"
 
 const normalizeText = (value?: string | null) => value?.trim() || undefined
 const UNIVERSE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+const isHttpUrl = (value: string) => {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === "https:" || protocol === "http:"
+  } catch {
+    return false
+  }
+}
 
 const normalizeUniverse = (value?: string | null) => {
   const trimmed = value?.trim().toLowerCase()
@@ -68,31 +77,24 @@ const parseReleaseDate = (value?: string | null) => {
 export const comics = new Elysia({ prefix: "/comics" })
   .post(
     "/",
-    async ({ body, set }) => {
+    async ({ body, set, request }) => {
+      const admin = await getAdminFromRequest(request)
+      if (!admin) {
+        set.status = 401
+        return { success: false, message: "Acesso restrito ao administrador." }
+      }
+
       if (!isDbAvailable) {
         set.status = 503
         return { success: false, message: "Banco indisponível" }
       }
 
       const releaseDate = parseReleaseDate(body.releaseDate)
-      if (body.releaseDate && !releaseDate) {
+      if (!releaseDate) {
         set.status = 400
         return {
           success: false,
           message: "Data de lançamento inválida. Use MM/DD/YYYY ou ISO 8601.",
-        }
-      }
-
-      if (body.characterId) {
-        const character = await db!
-          .select({ id: characters.id })
-          .from(characters)
-          .where(eq(characters.id, body.characterId))
-          .limit(1)
-
-        if (character.length === 0) {
-          set.status = 404
-          return { success: false, message: "Personagem não encontrado" }
         }
       }
 
@@ -102,10 +104,33 @@ export const comics = new Elysia({ prefix: "/comics" })
         return { success: false, message: "Título inválido" }
       }
 
+      const downloadUrl = normalizeText(body.downloadUrl)
+      if (!downloadUrl || !isHttpUrl(downloadUrl)) {
+        set.status = 400
+        return { success: false, message: "Link de download inválido. Use um endereço http(s)." }
+      }
+
+      const coverUrl = normalizeText(body.coverUrl)
+      if (coverUrl && !isHttpUrl(coverUrl)) {
+        set.status = 400
+        return { success: false, message: "Link da capa inválido. Use um endereço http(s)." }
+      }
+
       const universe = resolveUniverse(body.universe)
       if (!UNIVERSE_SLUG_PATTERN.test(universe)) {
         set.status = 400
         return { success: false, message: "Universo inválido" }
+      }
+
+      const character = await db!
+        .select({ id: characters.id })
+        .from(characters)
+        .where(eq(characters.id, body.characterId))
+        .limit(1)
+
+      if (character.length === 0) {
+        set.status = 404
+        return { success: false, message: "Personagem não encontrado" }
       }
 
       try {
@@ -115,21 +140,19 @@ export const comics = new Elysia({ prefix: "/comics" })
             title: normalizedTitle,
             universe,
             publisher: normalizeText(body.publisher) ?? "DC Comics",
-            issueNumber: body.issueNumber ?? null,
-            releaseDate: releaseDate ?? null,
-            downloadUrl: normalizeText(body.downloadUrl) ?? null,
-            coverUrl: normalizeText(body.coverUrl) ?? null,
+            issueNumber: body.issueNumber,
+            releaseDate,
+            downloadUrl,
+            coverUrl: coverUrl ?? null,
             writer: normalizeText(body.writer ?? body.writter) ?? null,
             artists: normalizeText(body.artists ?? body.artisti) ?? null,
           })
           .returning()
 
-        if (body.characterId) {
-          await db!
-            .insert(comicsToCharacters)
-            .values({ comicId: createdComic.id, characterId: body.characterId })
-            .onConflictDoNothing()
-        }
+        await db!
+          .insert(comicsToCharacters)
+          .values({ comicId: createdComic.id, characterId: body.characterId })
+          .onConflictDoNothing()
 
         set.status = 201
         return { data: createdComic }
@@ -153,16 +176,16 @@ export const comics = new Elysia({ prefix: "/comics" })
       body: t.Object({
         title: t.String({ minLength: 1, maxLength: 255 }),
         publisher: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
-        issueNumber: t.Optional(t.Number({ minimum: 0 })),
-        releaseDate: t.Optional(t.String({ minLength: 4, maxLength: 32 })),
-        downloadUrl: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
+        issueNumber: t.Number({ minimum: 0 }),
+        releaseDate: t.String({ minLength: 4, maxLength: 32 }),
+        downloadUrl: t.String({ minLength: 1, maxLength: 500 }),
         coverUrl: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
         writer: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
         artists: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
         writter: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
         artisti: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
         universe: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
-        characterId: t.Optional(t.String({ format: "uuid" })),
+        characterId: t.String({ format: "uuid" }),
       }),
     },
   )
@@ -215,7 +238,7 @@ export const comics = new Elysia({ prefix: "/comics" })
       return { data: [], userCreatedAt: null, message: "Banco indisponível" }
     }
 
-    const authUser = getAuthUserFromRequest(request)
+    const authUser = await getAuthUserFromRequest(request)
     if (!authUser) {
       set.status = 401
       return { data: [], userCreatedAt: null, message: "Usuário não autenticado" }
@@ -270,7 +293,7 @@ export const comics = new Elysia({ prefix: "/comics" })
         return { data: { count: 0 }, message: "Universo inválido" }
       }
 
-      const authUser = getAuthUserFromRequest(request)
+      const authUser = await getAuthUserFromRequest(request)
       if (!authUser) {
         set.status = 401
         return { data: { count: 0 }, message: "Usuário não autenticado" }
@@ -327,7 +350,7 @@ export const comics = new Elysia({ prefix: "/comics" })
       return { success: false, message: "Banco indisponível" }
     }
 
-    const authUser = getAuthUserFromRequest(request)
+    const authUser = await getAuthUserFromRequest(request)
     if (!authUser) {
       set.status = 401
       return { success: false, message: "Usuário não autenticado" }

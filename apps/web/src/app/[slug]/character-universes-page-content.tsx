@@ -1,6 +1,7 @@
 "use client"
 
 import type { CharacterImages } from "@/constants/character-images"
+import { isOptimizedImageUrl } from "@/lib/remote-images"
 import type { Character, CharacterUniverseSummary } from "@dc-absoluto/shared-types"
 import { AlertTriangle, ArrowLeft, BookOpen, ChevronRight, Layers3, Sparkles } from "lucide-react"
 import Image from "next/image"
@@ -55,14 +56,16 @@ export function CharacterUniversesPageContent({
 
       <div className="relative isolate min-h-svh overflow-hidden pt-20">
         <div className="absolute inset-0">
-          <Image
-            src={theme.image}
-            alt={character?.name ?? slug}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-top opacity-20"
-          />
+          {theme.image && (
+            <Image
+              src={theme.image}
+              alt={character?.name ?? slug}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-top opacity-20"
+            />
+          )}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_0_35%),linear-gradient(120deg,rgba(0,0,0,0.96)_12%,rgba(0,0,0,0.72)_48%,rgba(0,0,0,0.94)_100%)]" />
           <div
             className="absolute inset-0 opacity-60"
@@ -199,6 +202,9 @@ export function CharacterUniversesPageContent({
                               <div className="relative hidden aspect-[623/959] w-20 overflow-hidden rounded-2xl border border-white/10 bg-black/30 shadow-2xl sm:block">
                                 <Image
                                   src={universe.latestComic.coverUrl}
+                                  unoptimized={
+                                    !isOptimizedImageUrl(universe.latestComic.coverUrl)
+                                  }
                                   alt={universe.latestComic.title}
                                   fill
                                   sizes="80px"

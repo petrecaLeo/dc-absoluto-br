@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
-import { cookies } from "next/headers"
 
-import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
-import { getServerAuthUser } from "@/components/header/auth.server"
+import { getServerAuthUser, getSessionToken } from "@/components/header/auth.server"
 import { getCharacterImages } from "@/constants/character-images"
 import { SITE_DESCRIPTION } from "@/lib/seo"
 import { deduplicateById } from "@/utils/deduplicate-by-id"
@@ -47,18 +45,13 @@ export async function generateMetadata({
       description,
       url: `/${slug}/${universe}`,
       type: "website",
-      images: [
-        {
-          url: theme.image,
-          alt: characterName,
-        },
-      ],
+      images: theme.image ? [{ url: theme.image, alt: characterName }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: `${characterName} | ${universeLabel}`,
       description,
-      images: [theme.image],
+      images: theme.image ? [theme.image] : undefined,
     },
   }
 }
@@ -68,9 +61,7 @@ export default async function CharacterUniversePage({ params }: CharacterUnivers
   const result = await getCharacterComics(slug, universe)
   const characterTheme = getCharacterImages(slug)
   const authUser = await getServerAuthUser()
-  const cookieStore = await cookies()
-  const authCookieValue = cookieStore.get(AUTH_COOKIE_KEY)?.value
-  const readComics = authUser ? await getReadComicsByCharacter(slug, authCookieValue) : []
+  const readComics = authUser ? await getReadComicsByCharacter(slug, await getSessionToken()) : []
 
   if (!result || !result.data) {
     return (

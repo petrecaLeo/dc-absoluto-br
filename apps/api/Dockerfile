@@ -5,13 +5,13 @@ RUN apk add --no-cache nodejs npm && npm install -g pnpm
 WORKDIR /app
 
 # Copiar arquivos de configuração do workspace
-COPY package.json pnpm-workspace.yaml tsconfig.json .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json .npmrc ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/shared-schemas/package.json ./packages/shared-schemas/
 
 # Instalar dependências
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Copiar código fonte
 COPY apps/api ./apps/api

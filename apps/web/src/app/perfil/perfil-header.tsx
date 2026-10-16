@@ -4,13 +4,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { clearStoredUser } from "@/components/header/auth.storage"
+import { logout } from "@/components/header/auth.storage"
 
 export function PerfilHeader() {
   const router = useRouter()
 
-  const handleLogout = () => {
-    clearStoredUser()
+  const handleLogout = async () => {
+    await logout()
     router.push("/")
   }
 

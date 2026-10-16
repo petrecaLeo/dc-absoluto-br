@@ -52,10 +52,30 @@ SITE_URL=http://localhost:3000
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 RESEND_API_KEY=seu_token_resend
 RESEND_FROM_EMAIL="DC Absoluto BR <noreply@dcabsoluto.com.br>"
+AUTH_SECRET=gere_com_openssl_rand_base64_48
+ADMIN_EMAIL=seu@email.com
 ```
 
 `API_BASE_URL` é usado para gerar links públicos nos e-mails (ex.: desinscrição).
 `SITE_URL` é usado para gerar links públicos do site (ex.: confirmação de e-mail).
+`AUTH_SECRET` assina as sessões. A API e o web precisam do **mesmo** valor, com no mínimo 32 caracteres
+(`openssl rand -base64 48`). Sem ele a API não sobe e o web trata todo mundo como deslogado.
+Trocar o valor desloga todos os usuários.
+`ADMIN_EMAIL` é o único e-mail que pode entrar em `/adicionar` (só a API usa).
+
+## Autenticação
+
+- O login devolve um token assinado (HMAC-SHA256) que o web guarda no cookie `dcabsoluto.session`
+  (`HttpOnly`, `SameSite=Lax`, 30 dias). O JavaScript da página não lê nem consegue forjar a sessão.
+- As rotas autenticadas da API aceitam o token no cookie ou em `Authorization: Bearer <token>`.
+- O `localStorage` guarda só nome e foto para exibir na interface.
+
+## Área administrativa (`/adicionar`)
+
+Página para cadastrar HQs sem chamar o endpoint na mão. Pede e-mail e senha da conta do `ADMIN_EMAIL`
+e cria uma sessão de admin separada de 30 minutos (cookie `dcabsoluto.admin`, `HttpOnly`,
+`SameSite=Strict`). Sem essa sessão, o formulário nem é renderizado. O `POST /api/comics` também
+exige o token de admin. Pelo `api.http`, rode antes o "Login de admin".
 
 ## Executando o Projeto
 

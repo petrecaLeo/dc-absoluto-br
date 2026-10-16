@@ -10,7 +10,7 @@ interface CharacterCardProps {
 }
 
 export function CharacterCard({ character, index }: CharacterCardProps) {
-  const { images, hasValidImage, hasValidLogo, handleImageError, handleLogoError, ratingStars } =
+  const { images, imageSrc, logoSrc, handleImageError, handleLogoError, ratingStars } =
     useCharacterCard(character)
 
   return (
@@ -36,10 +36,10 @@ export function CharacterCard({ character, index }: CharacterCardProps) {
 
       <div className="relative z-10 flex h-[420px] flex-col">
         <div className="relative flex-1 overflow-hidden">
-          {hasValidImage ? (
+          {imageSrc ? (
             <>
               <Image
-                src={images.image}
+                src={imageSrc}
                 alt={character.name}
                 fill
                 className="object-cover object-top transition-transform duration-700 group-hover:scale-110"
@@ -59,10 +59,10 @@ export function CharacterCard({ character, index }: CharacterCardProps) {
             </div>
           )}
 
-          {hasValidLogo && (
+          {logoSrc && (
             <div className="absolute right-4 top-4 z-20 h-16 w-16 drop-shadow-2xl transition-transform duration-300 group-hover:scale-110">
               <Image
-                src={images.logo}
+                src={logoSrc}
                 alt={`Logo ${character.name}`}
                 fill
                 className="object-contain"

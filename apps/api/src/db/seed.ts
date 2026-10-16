@@ -234,6 +234,13 @@ async function seed() {
         upvotes: 0,
       },
       {
+        slug: "catwoman",
+        name: "Mulher-Gato",
+        alias: "Selina Kyle",
+        rating: 0,
+        upvotes: 0,
+      },
+      {
         slug: "flash",
         name: "Flash",
         alias: "Wally West",

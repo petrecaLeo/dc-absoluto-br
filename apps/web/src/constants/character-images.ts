@@ -1,6 +1,7 @@
+// Personagem sem image/logo é exibido como um bloco nas cores dele.
 export interface CharacterImages {
-  image: string
-  logo: string
+  image?: string
+  logo?: string
   accentColor: string
   gradientFrom: string
   gradientTo: string
@@ -56,6 +57,11 @@ export const characterImages: Record<string, CharacterImages> = {
     gradientFrom: "#B71C1C",
     gradientTo: "#FFD600",
   },
+  catwoman: {
+    accentColor: "#9B59B6",
+    gradientFrom: "#120a1c",
+    gradientTo: "#4A235A",
+  },
   "martian-manhunter": {
     image: "/images/characters/martian-manhunter/character.webp",
     logo: "/images/characters/martian-manhunter/logo.webp",
@@ -66,8 +72,6 @@ export const characterImages: Record<string, CharacterImages> = {
 }
 
 export const defaultCharacterImages: CharacterImages = {
-  image: "/images/characters/default/character.webp",
-  logo: "/images/characters/default/logo.webp",
   accentColor: "#FFCC00",
   gradientFrom: "#1A1A2E",
   gradientTo: "#3D3D5C",

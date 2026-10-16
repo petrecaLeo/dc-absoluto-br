@@ -1,19 +1,15 @@
 import type { NextConfig } from "next"
 
+import { OPTIMIZED_IMAGE_HOSTNAMES } from "./src/lib/remote-images"
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@dc-absoluto/shared-types", "@dc-absoluto/shared-schemas"],
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "static.dc.com",
-      },
-      {
-        protocol: "https",
-        hostname: "static.wikia.nocookie.net",
-      },
-    ],
+    remotePatterns: OPTIMIZED_IMAGE_HOSTNAMES.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+    })),
   },
   async headers() {
     return [

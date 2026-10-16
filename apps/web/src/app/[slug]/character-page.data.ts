@@ -1,6 +1,6 @@
 import { cache } from "react"
 
-import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
+import { bearerHeader } from "@/components/header/auth.cookie"
 import { SERVER_API_URL } from "@/lib/env/server"
 import type { Character, CharacterUniverseSummary, Comic } from "@dc-absoluto/shared-types"
 
@@ -72,16 +72,14 @@ export const getCharacterUniverses = cache(
 
 export async function getReadComicsByCharacter(
   slug: string,
-  authCookieValue: string | undefined,
+  sessionToken: string | null,
 ): Promise<ReadComicEntry[]> {
-  if (!authCookieValue) return []
+  if (!sessionToken) return []
 
   try {
     const response = await fetch(`${SERVER_API_URL}/api/characters/${slug}/comics/read`, {
       cache: "no-store",
-      headers: {
-        cookie: `${AUTH_COOKIE_KEY}=${authCookieValue}`,
-      },
+      headers: bearerHeader(sessionToken),
     })
 
     if (!response.ok) return []

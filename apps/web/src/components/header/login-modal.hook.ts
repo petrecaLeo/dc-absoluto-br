@@ -51,14 +51,15 @@ export function useLoginModal() {
     setMessage("")
 
     try {
-      const endpoint = mode === "signup" ? "/api/auth/register" : "/api/auth/login"
+      // O login passa pela rota do Next, que guarda a sessão num cookie HttpOnly.
+      const endpoint = mode === "signup" ? `${API_URL}/api/auth/register` : "/api/auth/login"
       const normalizedEmail = email.trim().toLowerCase()
       const payload =
         mode === "signup"
           ? { name: name.trim(), email: normalizedEmail, password }
           : { email: normalizedEmail, password }
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

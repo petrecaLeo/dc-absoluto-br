@@ -1,6 +1,6 @@
 "use client"
 
-import { AUTH_COOKIE_KEY, decodeAuthCookie } from "@/components/header/auth.cookie"
+import { getStoredUser } from "@/components/header/auth.storage"
 import { PUBLIC_API_URL } from "@/lib/env/public"
 import { getCachedComic, setCachedComic } from "@/services/comic-cache"
 import { type ReadingProgress, readingProgress } from "@/services/reading-progress"
@@ -44,19 +44,6 @@ interface ExtractedPageForCache {
 interface ExtractedComicPages {
   pages: ComicPage[]
   blobsForCache: ExtractedPageForCache[]
-}
-
-function getAuthUserFromCookie() {
-  if (typeof document === "undefined") return null
-
-  const rawCookie = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.startsWith(`${AUTH_COOKIE_KEY}=`))
-
-  if (!rawCookie) return null
-
-  const value = rawCookie.substring(`${AUTH_COOKIE_KEY}=`.length)
-  return decodeAuthCookie(value)
 }
 
 function getUrlPathname(value: string) {
@@ -328,7 +315,7 @@ export function useComicReader({
       ? pages[currentPage + 1]
       : null
 
-  const authUserId = getAuthUserFromCookie()?.id ?? null
+  const authUserId = getStoredUser()?.id ?? null
 
   const isProgressForUser = useCallback(
     (progress: ReadingProgress | null) => {

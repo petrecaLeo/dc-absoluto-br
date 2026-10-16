@@ -46,3 +46,9 @@ export async function getCharacters(): Promise<CharactersResponse> {
 
   return response.json()
 }
+
+// Sem cache: a tela de admin precisa enxergar personagem recém-cadastrado.
+export async function getCharactersUncached(): Promise<CharactersResponse> {
+  const response = await fetchWithRetry(`${SERVER_API_URL}/api/characters`, { cache: "no-store" })
+  return response.json()
+}

@@ -1,4 +1,5 @@
 import { Elysia } from "elysia"
+import { admin } from "./admin"
 import { auth } from "./auth"
 import { characters } from "./characters"
 import { comics } from "./comics"
@@ -11,6 +12,7 @@ export const routes = new Elysia({ prefix: "/api" })
   .use(comics)
   .use(characters)
   .use(auth)
+  .use(admin)
   .use(newsletter)
   .use(proxy)
   .use(report)

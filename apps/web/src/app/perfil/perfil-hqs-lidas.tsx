@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 
+import { isOptimizedImageUrl } from "@/lib/remote-images"
 import { getCharacterComicsClient, getCharactersClient } from "@/services/characters.client"
 import { getReadComicsByCharacter } from "@/services/read-comics.client"
 import type { Character, Comic } from "@dc-absoluto/shared-types"
@@ -169,6 +170,7 @@ function ComicCard({ comic }: { comic: ComicWithReadAt }) {
         {comic.coverUrl ? (
           <Image
             src={comic.coverUrl}
+            unoptimized={!isOptimizedImageUrl(comic.coverUrl)}
             alt={comic.title}
             fill
             sizes="(min-width: 1024px) 220px, (min-width: 640px) 45vw, 90vw"

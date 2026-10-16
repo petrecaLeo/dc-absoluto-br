@@ -1,6 +1,7 @@
 "use client"
 
 import { PUBLIC_API_URL } from "@/lib/env/public"
+import { isOptimizedImageUrl } from "@/lib/remote-images"
 import Image from "next/image"
 import { useState } from "react"
 
@@ -52,6 +53,7 @@ export function LatestLaunch({ comic }: LatestLaunchProps) {
           {comic.coverUrl ? (
             <Image
               src={comic.coverUrl}
+              unoptimized={!isOptimizedImageUrl(comic.coverUrl)}
               alt={comic.title}
               fill
               sizes="(max-width: 1024px) 50vw, 220px"

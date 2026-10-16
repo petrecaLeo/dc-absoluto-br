@@ -5,7 +5,13 @@ import { useEffect, useRef, useState } from "react"
 
 import { UserAvatar } from "@/components/user-avatar"
 
-import { clearStoredUser, getStoredUser, storeUser, subscribeAuthChanges } from "./auth.storage"
+import {
+  clearStoredUser,
+  getStoredUser,
+  logout,
+  storeUser,
+  subscribeAuthChanges,
+} from "./auth.storage"
 import type { AuthUser } from "./auth.types"
 import { useHeader } from "./header.hook"
 import { LoginModal } from "./login-modal"
@@ -31,14 +37,11 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
   }
 
   useEffect(() => {
+    // O servidor validou o cookie de sessão: ele é a fonte da verdade.
     if (initialAuthUser) {
       storeUser(initialAuthUser)
-    } else {
-      const storedUser = getStoredUser()
-      if (storedUser) {
-        storeUser(storedUser)
-        setAuthUser(storedUser)
-      }
+    } else if (getStoredUser()) {
+      clearStoredUser()
     }
 
     const unsubscribe = subscribeAuthChanges(setAuthUser)
@@ -94,7 +97,7 @@ export function HeaderClient({ initialAuthUser = null }: HeaderClientProps) {
   }
 
   const handleLogout = () => {
-    clearStoredUser()
+    void logout()
     setAuthUser(null)
     setIsProfileOpen(false)
     setIsMenuOpen(false)

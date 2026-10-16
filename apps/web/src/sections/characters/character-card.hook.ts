@@ -10,8 +10,8 @@ export function useCharacterCard(character: Character) {
 
   const images = getCharacterImages(character.slug)
 
-  const hasValidImage = !imageError && images.image !== "/images/characters/default/character.webp"
-  const hasValidLogo = !logoError && images.logo !== "/images/characters/default/logo.webp"
+  const imageSrc = imageError ? undefined : images.image
+  const logoSrc = logoError ? undefined : images.logo
 
   const handleImageError = () => setImageError(true)
   const handleLogoError = () => setLogoError(true)
@@ -23,8 +23,8 @@ export function useCharacterCard(character: Character) {
 
   return {
     images,
-    hasValidImage,
-    hasValidLogo,
+    imageSrc,
+    logoSrc,
     handleImageError,
     handleLogoError,
     ratingStars,

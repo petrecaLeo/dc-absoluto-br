@@ -1,14 +1,13 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { AUTH_COOKIE_KEY } from "@/components/header/auth.cookie"
+import { bearerHeader } from "@/components/header/auth.cookie"
+import { getSessionToken } from "@/components/header/auth.server"
 import { SERVER_API_URL } from "@/lib/env/server"
 
 export async function GET(request: Request) {
-  const cookieStore = await cookies()
-  const authCookieValue = cookieStore.get(AUTH_COOKIE_KEY)?.value
+  const sessionToken = await getSessionToken()
 
-  if (!authCookieValue) {
+  if (!sessionToken) {
     return NextResponse.json({ data: { count: 0 } }, { status: 401 })
   }
 
@@ -26,9 +25,7 @@ export async function GET(request: Request) {
       }`,
       {
         cache: "no-store",
-        headers: {
-          cookie: `${AUTH_COOKIE_KEY}=${authCookieValue}`,
-        },
+        headers: bearerHeader(sessionToken),
       },
     )
 

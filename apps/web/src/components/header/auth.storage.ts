@@ -1,27 +1,30 @@
-import { AUTH_COOKIE_KEY, encodeAuthCookie } from "./auth.cookie"
 import type { AuthUser } from "./auth.types"
 import { parseAuthUser } from "./auth.validation"
 
-const STORAGE_KEY = "dcabsoluto.auth"
+// Cópia do usuário só para exibição (nome, foto). A sessão de verdade fica num cookie HttpOnly
+// assinado pelo servidor, que o JavaScript da página não consegue ler nem forjar.
+const STORAGE_KEY = "dcabsoluto.user"
+const LEGACY_STORAGE_KEY = "dcabsoluto.auth"
 const AUTH_EVENT = "dcabsoluto:auth"
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
-function setAuthCookie(value: string) {
-  if (typeof window === "undefined") return
-  const secure = window.location.protocol === "https:" ? "; Secure" : ""
-  document.cookie = `${AUTH_COOKIE_KEY}=${value}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`
+let hasRemovedLegacyState = false
+
+function removeLegacyAuthState() {
+  if (hasRemovedLegacyState) return
+  hasRemovedLegacyState = true
+  window.localStorage.removeItem(LEGACY_STORAGE_KEY)
+  document.cookie = `${LEGACY_STORAGE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`
 }
 
-function clearAuthCookie() {
-  if (typeof window === "undefined") return
-  const secure = window.location.protocol === "https:" ? "; Secure" : ""
-  document.cookie = `${AUTH_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+function emitAuthChange(user: AuthUser | null) {
+  window.dispatchEvent(new CustomEvent<AuthUser | null>(AUTH_EVENT, { detail: user }))
 }
 
 export function getStoredUser(): AuthUser | null {
   if (typeof window === "undefined") return null
 
   try {
+    removeLegacyAuthState()
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
 
@@ -34,15 +37,23 @@ export function getStoredUser(): AuthUser | null {
 export function storeUser(user: AuthUser) {
   if (typeof window === "undefined") return
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
-  setAuthCookie(encodeAuthCookie(user))
-  window.dispatchEvent(new CustomEvent<AuthUser | null>(AUTH_EVENT, { detail: user }))
+  emitAuthChange(user)
 }
 
 export function clearStoredUser() {
   if (typeof window === "undefined") return
   window.localStorage.removeItem(STORAGE_KEY)
-  clearAuthCookie()
-  window.dispatchEvent(new CustomEvent<AuthUser | null>(AUTH_EVENT, { detail: null }))
+  emitAuthChange(null)
+}
+
+export async function logout() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" })
+  } catch {
+    // Mesmo sem resposta do servidor, a interface precisa refletir o logout.
+  } finally {
+    clearStoredUser()
+  }
 }
 
 export function subscribeAuthChanges(callback: (user: AuthUser | null) => void) {

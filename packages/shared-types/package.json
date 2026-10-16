@@ -8,6 +8,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./session-token": {
+      "types": "./src/session-token.ts",
+      "default": "./src/session-token.ts"
     }
   },
   "scripts": {

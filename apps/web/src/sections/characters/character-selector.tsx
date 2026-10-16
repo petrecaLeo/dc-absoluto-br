@@ -76,18 +76,27 @@ export function CharacterSelector({ characters }: CharacterSelectorProps) {
               index === selectedIndex ? "opacity-100" : "opacity-0"
             }`}
           >
-            <Image
-              src={character.images.image}
-              alt={character.name}
-              fill
-              className={`object-cover object-center ${
-                character.slug === "martian-manhunter"
-                  ? "lg:object-bottom-right"
-                  : "lg:object-top-right"
-              }`}
-              priority={index === 0}
-              sizes="100vw"
-            />
+            {character.images.image ? (
+              <Image
+                src={character.images.image}
+                alt={character.name}
+                fill
+                className={`object-cover object-center ${
+                  character.slug === "martian-manhunter"
+                    ? "lg:object-bottom-right"
+                    : "lg:object-top-right"
+                }`}
+                priority={index === 0}
+                sizes="100vw"
+              />
+            ) : (
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, ${character.images.gradientTo} 0%, ${character.images.gradientFrom} 70%)`,
+                }}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -285,14 +294,25 @@ function CharacterSlot({ character, isSelected, onClick }: CharacterSlotProps) {
           borderColor: isSelected ? character.images.accentColor : undefined,
         }}
       >
-        <Image
-          src={character.images.logo}
-          alt={character.name}
-          fill
-          className={`object-cover ${["green-lantern", "flash"].includes(character.slug) ? "object-[50%_50%]" : "object-[50%_43%]"} transition-all duration-300 ${
-            isSelected ? "brightness-110" : "brightness-75 group-hover:brightness-100"
-          }`}
-        />
+        {character.images.logo ? (
+          <Image
+            src={character.images.logo}
+            alt={character.name}
+            fill
+            className={`object-cover ${["green-lantern", "flash"].includes(character.slug) ? "object-[50%_50%]" : "object-[50%_43%]"} transition-all duration-300 ${
+              isSelected ? "brightness-110" : "brightness-75 group-hover:brightness-100"
+            }`}
+          />
+        ) : (
+          <div
+            className={`absolute inset-0 transition-all duration-300 ${
+              isSelected ? "brightness-110" : "brightness-75 group-hover:brightness-100"
+            }`}
+            style={{
+              background: `linear-gradient(135deg, ${character.images.accentColor} 0%, ${character.images.gradientTo} 100%)`,
+            }}
+          />
+        )}
 
         {!isSelected && (
           <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-all duration-300" />

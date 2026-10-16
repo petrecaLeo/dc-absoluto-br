@@ -5,13 +5,13 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 
 # Copiar arquivos de configuração do workspace
-COPY package.json pnpm-workspace.yaml tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json .npmrc ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/shared-schemas/package.json ./packages/shared-schemas/
 
 # Instalar dependências
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Copiar código fonte
 COPY apps/web ./apps/web

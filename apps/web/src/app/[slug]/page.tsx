@@ -46,18 +46,13 @@ export async function generateMetadata({
       description,
       url: `/${slug}`,
       type: "website",
-      images: [
-        {
-          url: theme.image,
-          alt: characterName,
-        },
-      ],
+      images: theme.image ? [{ url: theme.image, alt: characterName }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: `${characterName} | Universos`,
       description,
-      images: [theme.image],
+      images: theme.image ? [theme.image] : undefined,
     },
   }
 }

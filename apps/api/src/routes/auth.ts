@@ -4,13 +4,15 @@ import { Elysia, t } from "elysia"
 import { db, isDbAvailable } from "../db"
 import { passwordResetTokens, userEmailVerifications, users } from "../db/schema"
 import { sendEmailVerificationEmail, sendPasswordResetEmail } from "../services/email"
-import { getAuthUserFromRequest } from "../utils/auth"
+import { createUserSessionToken, getAuthUserFromRequest } from "../utils/auth"
+import { TOO_MANY_ATTEMPTS_MESSAGE, createAttemptLimiter } from "../utils/rate-limit"
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
 const PASSWORD_PATTERN = "^(?=.*\\d).{6,}$"
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 const PROFILE_IMAGE_IDS = new Set(PROFILE_IMAGE_OPTIONS.map((option) => option.id))
+const loginLimiter = createAttemptLimiter({ maxAttempts: 10, windowMs: 15 * 60 * 1000 })
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
 const normalizeName = (name: string) => name.trim().replace(/\\s+/g, " ")
@@ -116,16 +118,24 @@ export const auth = new Elysia({ prefix: "/auth" })
       const normalizedEmail = normalizeEmail(body.email)
 
       if (!isDbAvailable) {
+        const offlineUser = {
+          id: crypto.randomUUID(),
+          name: normalizedEmail.split("@")[0] || "Visitante",
+          email: normalizedEmail,
+          profileImage: null,
+        }
+
         return {
           success: true,
           message: "Login realizado (ambiente sem banco)",
-          user: {
-            id: crypto.randomUUID(),
-            name: normalizedEmail.split("@")[0] || "Visitante",
-            email: normalizedEmail,
-            profileImage: null,
-          },
+          user: offlineUser,
+          token: await createUserSessionToken(offlineUser),
         }
+      }
+
+      if (loginLimiter.isBlocked(normalizedEmail)) {
+        set.status = 429
+        return { success: false, message: TOO_MANY_ATTEMPTS_MESSAGE }
       }
 
       const [user] = await db!.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
@@ -159,6 +169,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           }
         }
 
+        loginLimiter.registerFailure(normalizedEmail)
         set.status = 401
         return { success: false, message: "Credenciais inválidas." }
       }
@@ -166,9 +177,12 @@ export const auth = new Elysia({ prefix: "/auth" })
       const isPasswordValid = await Bun.password.verify(body.password, user.passwordHash)
 
       if (!isPasswordValid) {
+        loginLimiter.registerFailure(normalizedEmail)
         set.status = 401
         return { success: false, message: "Credenciais inválidas." }
       }
+
+      loginLimiter.reset(normalizedEmail)
 
       return {
         success: true,
@@ -180,6 +194,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           profileImage: user.profileImage ?? null,
           createdAt: user.createdAt.toISOString(),
         },
+        token: await createUserSessionToken(user),
       }
     },
     {
@@ -192,7 +207,7 @@ export const auth = new Elysia({ prefix: "/auth" })
   .post(
     "/change-password",
     async ({ body, request, set }) => {
-      const authUser = getAuthUserFromRequest(request)
+      const authUser = await getAuthUserFromRequest(request)
       if (!authUser) {
         set.status = 401
         return { success: false, message: "Usuário não autenticado." }
@@ -253,7 +268,7 @@ export const auth = new Elysia({ prefix: "/auth" })
   .post(
     "/profile-image",
     async ({ body, request, set }) => {
-      const authUser = getAuthUserFromRequest(request)
+      const authUser = await getAuthUserFromRequest(request)
       if (!authUser) {
         set.status = 401
         return { success: false, message: "Usuário não autenticado." }
@@ -266,15 +281,13 @@ export const auth = new Elysia({ prefix: "/auth" })
       }
 
       if (!isDbAvailable) {
+        const updatedUser = { ...authUser, profileImage }
+
         return {
           success: true,
           message: "Foto atualizada (ambiente sem banco).",
-          user: {
-            id: authUser.id,
-            name: authUser.name,
-            email: authUser.email,
-            profileImage,
-          },
+          user: updatedUser,
+          token: await createUserSessionToken(updatedUser),
         }
       }
 
@@ -295,16 +308,19 @@ export const auth = new Elysia({ prefix: "/auth" })
           .set({ profileImage, updatedAt: new Date() })
           .where(eq(users.id, user.id))
 
+        const updatedUser = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          profileImage,
+          createdAt: user.createdAt.toISOString(),
+        }
+
         return {
           success: true,
           message: "Foto atualizada com sucesso.",
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            profileImage,
-            createdAt: user.createdAt.toISOString(),
-          },
+          user: updatedUser,
+          token: await createUserSessionToken(updatedUser),
         }
       } catch (error) {
         console.error("Erro ao atualizar foto de perfil:", error)
@@ -321,7 +337,7 @@ export const auth = new Elysia({ prefix: "/auth" })
   .post(
     "/profile-name",
     async ({ body, request, set }) => {
-      const authUser = getAuthUserFromRequest(request)
+      const authUser = await getAuthUserFromRequest(request)
       if (!authUser) {
         set.status = 401
         return { success: false, message: "Usuário não autenticado." }
@@ -334,15 +350,13 @@ export const auth = new Elysia({ prefix: "/auth" })
       }
 
       if (!isDbAvailable) {
+        const updatedUser = { ...authUser, name }
+
         return {
           success: true,
           message: "Nome atualizado (ambiente sem banco).",
-          user: {
-            id: authUser.id,
-            name,
-            email: authUser.email,
-            profileImage: authUser.profileImage,
-          },
+          user: updatedUser,
+          token: await createUserSessionToken(updatedUser),
         }
       }
 
@@ -360,16 +374,19 @@ export const auth = new Elysia({ prefix: "/auth" })
 
         await db!.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, user.id))
 
+        const updatedUser = {
+          id: user.id,
+          name,
+          email: user.email,
+          profileImage: user.profileImage,
+          createdAt: user.createdAt.toISOString(),
+        }
+
         return {
           success: true,
           message: "Nome atualizado com sucesso.",
-          user: {
-            id: user.id,
-            name,
-            email: user.email,
-            profileImage: user.profileImage,
-            createdAt: user.createdAt.toISOString(),
-          },
+          user: updatedUser,
+          token: await createUserSessionToken(updatedUser),
         }
       } catch (error) {
         console.error("Erro ao atualizar nome:", error)

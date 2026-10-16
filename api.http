@@ -1,7 +1,6 @@
 ### DC Absoluto BR - API Tests
 ### Base URL
 @baseUrl = http://localhost:3001
-@authCookie = dcabsoluto.auth=COLOQUE_AQUI
 @characterSlug = batman
 @universe = absolute
 
@@ -26,7 +25,8 @@ Content-Type: application/json
   "password": "Senha123"
 }
 
-### Login
+### Login (devolve "token": as rotas autenticadas usam o resultado desta requisição)
+# @name login
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
@@ -68,32 +68,46 @@ Content-Type: application/json
   "password": "NovaSenha456"
 }
 
-### Alterar senha (requer cookie de auth)
+### Alterar senha (requer login)
 POST {{baseUrl}}/api/auth/change-password
 Content-Type: application/json
-Cookie: {{authCookie}}
+Authorization: Bearer {{login.response.body.$.token}}
 
 {
   "currentPassword": "Senha123",
   "newPassword": "NovaSenha123"
 }
 
-### Atualizar nome do perfil (requer cookie de auth)
+### Atualizar nome do perfil (requer login)
 POST {{baseUrl}}/api/auth/profile-name
 Content-Type: application/json
-Cookie: {{authCookie}}
+Authorization: Bearer {{login.response.body.$.token}}
 
 {
   "name": "Clark Kent"
 }
 
-### Atualizar foto de perfil (requer cookie de auth)
+### Atualizar foto de perfil (requer login)
 POST {{baseUrl}}/api/auth/profile-image
 Content-Type: application/json
-Cookie: {{authCookie}}
+Authorization: Bearer {{login.response.body.$.token}}
 
 {
   "profileImage": "batman"
+}
+
+### ===================
+### Admin
+### ===================
+
+### Login de admin (só ADMIN_EMAIL; token vale 30 min e é usado no cadastro de HQs)
+# @name adminLogin
+POST {{baseUrl}}/api/admin/login
+Content-Type: application/json
+
+{
+  "email": "leopetrecca@gmail.com",
+  "password": "SUA_SENHA"
 }
 
 ### ===================
@@ -103,6 +117,7 @@ Cookie: {{authCookie}}
 ### Cadastrar HQ com universo default (omitir universe => absolute)
 POST {{baseUrl}}/api/comics
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.$.token}}
 
 {
   "title": "Lanterna Verde Absoluta #12",
@@ -119,18 +134,19 @@ Content-Type: application/json
 ### Cadastrar HQ em outro universo
 POST {{baseUrl}}/api/comics
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.$.token}}
 
 {
-  "title": "Tropa Dos Lanternas Verdes #19",
-  "universe": "geoff-johns",
+  "title": "Arqueiro Verde Absoluto #1",
+  "universe": "absolute",
   "publisher": "DC Comics",
-  "issueNumber": 45,
-  "releaseDate": "2007-12-12",
-  "downloadUrl": "https://www.mediafire.com/file/yk5f5f26bfrf40s/A+Guerra+da+Tropa+Sinestro+-+17+de+19.cbr/file",
-  "coverUrl": "https://static.dc.com/dc/files/default_images/glcorps_v2_19_5b15bb0211ec60.09585934.jpg?w=640",
-  "writer": "Peter J. Tomasi",
-  "artists": "Tom Nguyen, Dan Davis, Patrick Gleason, Prentis Rollins, Drew Geraci, Rebecca Buchman, Derek Fridolfs, Jonathan Smith, Guy Major, Justino David Curiel Pena, Jesse Delperdang",
-  "characterId": "90df6742-054a-4af4-a32d-748a54b095d9"
+  "issueNumber": 1,
+  "releaseDate": "2026-05-20",
+  "downloadUrl": "https://www.mediafire.com/file/lef8zhov19ehd34/RqurVrd+Bslt+#01+(2026)+(DarkseidClub)",
+  "coverUrl": "https://static.dc.com/2026-05/T2484700015001.jpg?w=640",
+  "writer": "Pornsak Pichetshote",
+  "artists": "Rafael Albuquerque, Marcelo Maiolo",
+  "characterId": "8552b2fd-cafc-4d6e-bf52-e91b37d74f25"
 }
 
 ### Buscar HQ por ID
@@ -139,13 +155,13 @@ GET {{baseUrl}}/api/comics/123e4567-e89b-12d3-a456-426614174000
 ### Buscar último lançamento do universo escolhido
 GET {{baseUrl}}/api/comics/latest?universe={{universe}}
 
-### Buscar contagem de HQs lidas do universo escolhido (requer cookie de auth)
+### Buscar contagem de HQs lidas do universo escolhido (requer login)
 GET {{baseUrl}}/api/comics/read/count?universe={{universe}}
-Cookie: {{authCookie}}
+Authorization: Bearer {{login.response.body.$.token}}
 
-### Buscar personagens mais lidos (requer cookie de auth)
+### Buscar personagens mais lidos (requer login)
 GET {{baseUrl}}/api/comics/read/top-characters
-Cookie: {{authCookie}}
+Authorization: Bearer {{login.response.body.$.token}}
 
 ### ===================
 ### Users (Usuários)

@@ -114,12 +114,13 @@ describe("Characters Section", () => {
   })
 
   describe("Acessibilidade", () => {
+    // O axe percorre o carrossel inteiro e passa dos 5s padrão quando a suíte roda em paralelo.
     it("should have no accessibility violations", async () => {
       const CharactersResolved = await Characters()
       const { container } = render(CharactersResolved)
       const results = await axe(container)
 
       expect(results).toHaveNoViolations()
-    })
+    }, 15_000)
   })
 })
