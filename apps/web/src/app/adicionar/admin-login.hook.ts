@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { type FormEvent, useCallback, useState } from "react"
+import { type FormEvent, useCallback, useState, useTransition } from "react"
 
 export function useAdminLogin() {
   const router = useRouter()
@@ -9,6 +9,7 @@ export function useAdminLogin() {
   const [password, setPassword] = useState("")
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle")
   const [message, setMessage] = useState("")
+  const [isRefreshing, startRefresh] = useTransition()
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -34,7 +35,10 @@ export function useAdminLogin() {
           return
         }
 
-        router.refresh()
+        // O servidor passa a enxergar a sessão e troca o login pelo formulário. A transição
+        // segura o "Entrando..." só até a página recarregar, sem prender o botão para sempre.
+        setStatus("idle")
+        startRefresh(() => router.refresh())
       } catch {
         setPassword("")
         setStatus("error")
@@ -52,6 +56,6 @@ export function useAdminLogin() {
     status,
     message,
     handleSubmit,
-    isLoading: status === "loading",
+    isLoading: status === "loading" || isRefreshing,
   }
 }

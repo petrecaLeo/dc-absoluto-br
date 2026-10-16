@@ -17,8 +17,7 @@ export function AdminLogin() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <p className="text-sm leading-relaxed text-white/60">
-        Área restrita. Entre com a conta de administrador. A sessão dura 30 minutos e nada fica
-        salvo neste navegador.
+        Área restrita. Entre com a conta de administrador.
       </p>
 
       <div className="space-y-1.5">
