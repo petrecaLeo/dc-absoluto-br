@@ -47,7 +47,6 @@ Leia online, baixe, marque o que já leu e receba aviso quando sair edição nov
 - [Segurança](#-segurança)
 - [Testes](#-testes)
 - [Arquitetura e stack](#-arquitetura-e-stack)
-- [Rodando localmente](#-rodando-localmente)
 - [Direitos e créditos](#-direitos-e-créditos)
 
 ## ✨ Funcionalidades
@@ -83,7 +82,7 @@ Leia online, baixe, marque o que já leu e receba aviso quando sair edição nov
 
 ### Administração
 
-- A página `/adicionar` cadastra HQs pelo navegador. Ela só aparece para o e-mail definido em `ADMIN_EMAIL`, com uma sessão de admin separada que dura 30 minutos.
+- Uma área restrita ao administrador cadastra novas HQs pelo navegador, com uma sessão própria que expira em 30 minutos.
 
 ## 📸 Telas
 
@@ -114,16 +113,13 @@ Leia online, baixe, marque o que já leu e receba aviso quando sair edição nov
 
 ## 🚀 Performance
 
-Medição com Lighthouse 12.8 na home de produção, em 16/10/2026:
+Medição com Lighthouse 12.8 na home de produção (desktop), em 16/10/2026:
 
-| Categoria      | Desktop | Mobile   |
-|----------------|:-------:|:--------:|
-| Performance    | 94      | 59 a 65  |
-| Acessibilidade | 100     | 100      |
-| Boas práticas  | 100     | 100      |
-| SEO            | 100     | 100      |
+| Performance | Acessibilidade | Boas práticas | SEO |
+|:-----------:|:--------------:|:-------------:|:---:|
+| 94          | 100            | 100           | 100 |
 
-No desktop, o primeiro conteúdo aparece em 0,7 s e o maior elemento da tela em 1,0 s, com deslocamento de layout (CLS) de 0,009. No celular o CLS fica em 0,04 e o primeiro conteúdo em 1,5 s. O que ainda pesa no mobile é o JavaScript das animações da home.
+O primeiro conteúdo aparece em 0,7 s e o maior elemento da tela em 1,0 s, com deslocamento de layout (CLS) de 0,009.
 
 O que ajuda o site a carregar rápido:
 
@@ -144,7 +140,7 @@ O que ajuda o site a carregar rápido:
 
 ## ♿ Acessibilidade
 
-- Nota 100 no Lighthouse, no desktop e no celular.
+- Nota 100 no Lighthouse.
 - 12 verificações automáticas com axe-core (vitest-axe) rodam junto com os testes do front.
 - Link "Pular para conteúdo principal" no topo de todas as páginas.
 - Controles com `aria-label` (seleção de personagem, botões do leitor, menus) e modais com título associado.
@@ -173,15 +169,6 @@ São 151 testes automatizados:
 
 Os testes cobrem as seções da home, o formulário de admin, a sessão assinada, o limitador de tentativas, o proxy de download (incluindo os casos de SSRF), CORS, CSRF, newsletter, reportes e acessibilidade.
 
-```bash
-# Front e schemas
-pnpm test:web
-
-# API (precisa de Bun; sem Bun local, rode pelo Docker)
-pnpm test:api
-docker run --rm -v "$PWD":/app -v /app/node_modules -w /app/apps/api -e NODE_ENV=test dc-absoluto-br-api bun test
-```
-
 ## 🏗️ Arquitetura e stack
 
 ```mermaid
@@ -196,7 +183,7 @@ flowchart LR
 
 **Frontend (`apps/web`)**: Next.js 15 com React 19, Tailwind CSS v4, TanStack Query, libarchive.js e PDF.js no leitor, Vitest e React Testing Library nos testes.
 
-**Backend (`apps/api`)**: Bun com Elysia, Drizzle ORM, PostgreSQL no Neon e Resend para os e-mails. Fora de produção, a documentação Swagger fica em `/swagger`.
+**Backend (`apps/api`)**: Bun com Elysia, Drizzle ORM, PostgreSQL no Neon e Resend para os e-mails.
 
 **Monorepo**: Turborepo com pnpm workspaces e Biome para lint e formatação. Os pacotes `shared-types` e `shared-schemas` (Zod) são usados pelo web e pela API.
 
@@ -208,115 +195,8 @@ dc-absoluto-br/
 ├── packages/
 │   ├── shared-types/     # Interfaces TypeScript e token de sessão compartilhados
 │   └── shared-schemas/   # Schemas Zod compartilhados
-├── docs/images/          # Imagens deste README
-├── docker-compose.yml
-├── Makefile
-└── turbo.json
+└── docs/images/          # Imagens deste README
 ```
-
-## 💻 Rodando localmente
-
-### Pré-requisitos
-
-- [Node.js](https://nodejs.org/) 20+
-- [pnpm](https://pnpm.io/) 9+
-- [Docker](https://www.docker.com/) e Docker Compose
-- [Bun](https://bun.sh/) (para rodar a API fora do Docker)
-
-### Instalação
-
-```bash
-git clone https://github.com/petrecaLeo/dc-absoluto-br.git
-cd dc-absoluto-br
-
-make install
-# ou
-pnpm install
-```
-
-### Configuração
-
-Crie um arquivo `.env` na raiz do projeto (o `.env.example` tem o modelo):
-
-```env
-DATABASE_URL=postgres://usuario:senha@host/banco
-API_BASE_URL=http://localhost:3001
-NEXT_PUBLIC_API_URL=http://localhost:3001
-SITE_URL=http://localhost:3000
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-RESEND_API_KEY=seu_token_resend
-RESEND_FROM_EMAIL="DC Absoluto BR <noreply@dcabsoluto.com.br>"
-AUTH_SECRET=gere_com_openssl_rand_base64_48
-ADMIN_EMAIL=seu@email.com
-```
-
-- `API_BASE_URL` gera os links públicos da API nos e-mails (por exemplo, o de desinscrição).
-- `SITE_URL` gera os links do site nos e-mails (como a confirmação de cadastro) e define quem pode chamar a API pelo navegador. A API libera esse endereço com e sem `www.`. Para usar outra lista, defina `CORS_ORIGINS` com as origens separadas por vírgula.
-- `AUTH_SECRET` assina as sessões. A API e o web precisam do **mesmo** valor, com pelo menos 32 caracteres (`openssl rand -base64 48`). Sem ele a API não sobe e o web trata todo mundo como deslogado. Trocar o valor desloga todos os usuários.
-- `ADMIN_EMAIL` é o único e-mail que entra em `/adicionar` (só a API usa).
-
-### Autenticação
-
-- O login devolve um token assinado (HMAC-SHA256) que o web guarda no cookie `dcabsoluto.session` (`HttpOnly`, `SameSite=Lax`, 30 dias).
-- As rotas autenticadas da API aceitam o token no cookie ou em `Authorization: Bearer <token>`.
-- O `localStorage` guarda só nome e foto para exibir na interface.
-
-### Área administrativa (`/adicionar`)
-
-A página pede e-mail e senha da conta do `ADMIN_EMAIL` e cria uma sessão de admin de 30 minutos, separada da sessão comum (cookie `dcabsoluto.admin`, `HttpOnly`, `SameSite=Strict`). Sem essa sessão o formulário nem é renderizado. O `POST /api/comics` também exige o token de admin.
-
-### Executando
-
-Com Docker (recomendado):
-
-```bash
-make dev        # frontend + API
-make dev-web    # só o frontend
-make dev-api    # só a API
-make logs       # logs dos containers
-make down       # para os containers
-```
-
-Sem Docker:
-
-```bash
-pnpm dev:web
-pnpm dev:api
-```
-
-| Serviço  | URL                            |
-|----------|--------------------------------|
-| Frontend | http://localhost:3000          |
-| API      | http://localhost:3001          |
-| Swagger  | http://localhost:3001/swagger  |
-
-### Endpoints de newsletter
-
-- `POST /api/newsletter/subscribe` inscreve na newsletter geral
-- `POST /api/newsletter/character/subscribe` inscreve na newsletter de personagem
-- `GET /api/newsletter/unsubscribe/:id` desinscreve da newsletter geral
-- `GET /api/newsletter/character/unsubscribe/:id` desinscreve da newsletter de personagem
-
-### Comandos úteis
-
-| Comando              | Descrição                                   |
-|----------------------|---------------------------------------------|
-| `make dev`           | Sobe todos os serviços via Docker           |
-| `make test`          | Roda todos os testes                        |
-| `make test-watch`    | Testes em modo watch                        |
-| `pnpm test:coverage` | Testes com cobertura                        |
-| `pnpm lint`          | Lint com Biome                              |
-| `pnpm lint:fix`      | Corrige o que o Biome souber corrigir       |
-| `pnpm format`        | Formata o código com Biome                  |
-| `pnpm db:generate`   | Gera migrations do Drizzle                  |
-| `pnpm db:migrate`    | Executa as migrations                       |
-| `pnpm build`         | Build de produção                           |
-| `make clean`         | Remove containers, volumes e `node_modules` |
-
-### Convenções
-
-- Arquivos em `kebab-case.ts`, componentes React em `PascalCase.tsx`, variáveis e funções em `camelCase`, types e interfaces em `PascalCase`.
-- Commits em português, no formato conventional commits (`feat:`, `fix:`, `chore:`).
 
 ## ⚖️ Direitos e créditos
 
