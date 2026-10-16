@@ -38,7 +38,10 @@ coverage/
 # AI Agents
 .claude/
 /codex
+.codex/
 
 # Misc
 *.pem
 CLAUDE.md
+
+api.http
