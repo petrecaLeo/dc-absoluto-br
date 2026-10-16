@@ -58,6 +58,8 @@ export const characterImages: Record<string, CharacterImages> = {
     gradientTo: "#FFD600",
   },
   catwoman: {
+    image: "/images/characters/catwoman/character.webp",
+    logo: "/images/characters/catwoman/logo.webp",
     accentColor: "#9B59B6",
     gradientFrom: "#120a1c",
     gradientTo: "#4A235A",
