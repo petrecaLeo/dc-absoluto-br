@@ -116,14 +116,9 @@ export function useAddComicForm(characters: Character[]) {
           title: payload.title,
           href: character ? `/${character.slug}/${universe}` : null,
         })
+        // O formulário não é limpo: a próxima edição costuma mudar só nome, número, data e link.
         setStatus("success")
         setMessage("HQ cadastrada com sucesso.")
-        // Mantém personagem e universo para facilitar cadastrar a próxima edição.
-        setValues((previous) => ({
-          ...INITIAL_VALUES,
-          characterId: previous.characterId,
-          universe: previous.universe,
-        }))
       } catch {
         setStatus("error")
         setMessage("Erro de conexão. Tente novamente.")

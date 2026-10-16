@@ -139,8 +139,14 @@ describe("AddComicForm", () => {
       "href",
       "/catwoman/absolute",
     )
+    // O formulário fica como estava, para cadastrar a próxima edição mudando só o necessário.
     expect(screen.getByLabelText(/personagem/i)).toHaveValue(characters[0]?.id)
-    expect(screen.getByLabelText(/nome da hq/i)).toHaveValue("")
+    expect(screen.getByLabelText(/nome da hq/i)).toHaveValue("  Mulher-Gato Absoluta #1  ")
+    expect(screen.getByLabelText(/número/i)).toHaveValue(1)
+    expect(screen.getByLabelText(/data de lançamento/i)).toHaveValue("2026-06-10")
+    expect(screen.getByLabelText(/link de download/i)).toHaveValue(
+      "https://example.com/mulher-gato-1.cbr",
+    )
   })
 
   it("avisa quando a sessão de administrador expirou", async () => {
