@@ -25,7 +25,7 @@ Leia online, baixe, marque o que já leu e receba aviso quando sair edição nov
 ![Lighthouse Acessibilidade](https://img.shields.io/badge/Acessibilidade-100-0CCE6B?style=flat-square&logo=lighthouse&logoColor=white)
 ![Lighthouse Boas práticas](https://img.shields.io/badge/Boas_pr%C3%A1ticas-100-0CCE6B?style=flat-square&logo=lighthouse&logoColor=white)
 ![Lighthouse SEO](https://img.shields.io/badge/SEO-100-0CCE6B?style=flat-square&logo=lighthouse&logoColor=white)
-![Testes](https://img.shields.io/badge/testes-150_passando-2EA44F?style=flat-square&logo=vitest&logoColor=white)
+![Testes](https://img.shields.io/badge/testes-151_passando-2EA44F?style=flat-square&logo=vitest&logoColor=white)
 ![Projeto de fã](https://img.shields.io/badge/projeto_de_f%C3%A3-sem_fins_lucrativos-E62429?style=flat-square)
 
 </div>
@@ -163,12 +163,12 @@ O que ajuda o site a carregar rápido:
 
 ## 🧪 Testes
 
-São 150 testes automatizados:
+São 151 testes automatizados:
 
 | Pacote                     | Ferramentas                                     | Testes |
 |----------------------------|-------------------------------------------------|:------:|
 | `apps/web`                 | Vitest, React Testing Library, axe-core          | 83     |
-| `apps/api`                 | `bun test`                                      | 56     |
+| `apps/api`                 | `bun test`                                      | 57     |
 | `packages/shared-schemas`  | Vitest                                          | 11     |
 
 Os testes cobrem as seções da home, o formulário de admin, a sessão assinada, o limitador de tentativas, o proxy de download (incluindo os casos de SSRF), CORS, CSRF, newsletter, reportes e acessibilidade.

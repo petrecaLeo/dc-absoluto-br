@@ -402,7 +402,9 @@ export const proxy = new Elysia({ prefix: "/proxy" }).get(
         set.headers["last-modified"] = lastModified
       }
 
-      return response
+      // Resposta nova, só com o corpo: os headers do provedor (Set-Cookie, CORS liberado para
+      // qualquer site etc.) não podem chegar ao navegador em nome do domínio da API.
+      return new Response(response.body, { status: response.status })
     } catch (error) {
       if (error instanceof ProxyError) {
         set.status = error.status

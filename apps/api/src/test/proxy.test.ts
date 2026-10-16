@@ -172,6 +172,31 @@ describe("Proxy endpoints", () => {
     expect(await secondResponse.text()).toBe("cached-mediafire-file")
   })
 
+  it("does not forward provider headers like Set-Cookie or a wildcard CORS", async () => {
+    queuedResponses.push(
+      new Response("drive-file", {
+        headers: {
+          "content-type": "application/x-cbr",
+          "set-cookie": "NID=rastreio; Domain=.google.com",
+          "access-control-allow-origin": "*",
+        },
+      }),
+    )
+
+    const driveUrl = "https://drive.google.com/file/d/abc123/view"
+    const response = await app.handle(
+      new Request(`http://localhost/api/proxy/download?url=${encodeURIComponent(driveUrl)}`, {
+        headers: { origin: "http://localhost:3000" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("set-cookie")).toBeNull()
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://localhost:3000")
+    expect(response.headers.get("content-type")).toBe("application/x-cbr")
+    expect(await response.text()).toBe("drive-file")
+  })
+
   it("refuses other providers when the link is not a registered comic download", async () => {
     const directUrl = "https://example.com/files/comic.cbr"
     const response = await app.handle(
